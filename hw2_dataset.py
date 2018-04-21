@@ -15,7 +15,7 @@ import configparser
 import re
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--section', help='local, tencent or server', type=str)
+parser.add_argument('--section', help='lenovo, tencent or server', type=str)
 args = parser.parse_args()
 section = args.section
 
@@ -27,6 +27,8 @@ test_ratio = config.getfloat(section, 'test_ratio')
 
 def main():
     for i in range(1,3):
+        num_example_train = 0
+        num_example_test = 0
         logging.info("Split of dset{0} begins..."
                      .format(i))
         dset_path = data_path + '/dset%d' %i
@@ -41,13 +43,18 @@ def main():
                 os.mkdir(label_dir_test)
             count = 0
             files = os.listdir(dset_path_train + '/' + label_dir)
+            num_example_train += len(files)
             for file in files:
                 shutil.move(dset_path_train + '/' + label_dir+'/'+file,
                             dset_path_test + '/' + label_dir + '/' + file)
                 count += 1
+                num_example_train -= 1
+                num_example_test += 1
                 if(count > test_ratio*len(files)):
                     break
-        logging.info("Split of dset{0} has been finished."
-                     .format(i))
+        logging.info("Split of dset{0} has been finished. \
+                     num_example_train = {1} \
+                     num_example_test = {2}"
+                     .format(i, num_example_train, num_example_test))
 if __name__ == '__main__':
     main()

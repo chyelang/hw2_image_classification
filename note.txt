@@ -1,0 +1,10 @@
+num_examples, with test_ratio = 0.25
+dset1: train=2985 test = 1047
+dest2: train=2996 test = 1044
+
+255*230
+1600*1200
+204*204
+1332*2020
+2640*1760
+crop思路：先把最短边resize到160像素，再crop出160*24/32=120的图像来

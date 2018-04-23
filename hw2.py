@@ -19,6 +19,7 @@ section = FLAGS.section
 config = configparser.RawConfigParser()
 config_path = projectRootPath + '/' + 'config.cfg'
 config.read(config_path)
+os.environ["CUDA_VISIBLE_DEVICES"] = config.get(section, 'CUDA_VISIBLE_DEVICES')
 
 # Basic model parameters.
 tf.app.flags.DEFINE_integer('batch_size', config.getint(section, 'batch_size'),

@@ -8,3 +8,19 @@ dest2: train=2996 test = 1044
 1332*2020
 2640*1760
 crop思路：先把最短边resize到160像素，再crop出160*24/32=120的图像来
+
+ecm机器上，K80算两个gpu，设备列表如下：
+/device:CPU:0
+/device:GPU:0
+/device:GPU:1
+
+目前跑的代码把两块的显存都占满了，但是算力没满
+
+笔记本设备列表：
+/device:CPU:0
+/device:GPU:0
+
+计算一下每个batch占用的空间？(每个像素是32位浮点数）：128*120*120*3*32/8 = 22.5MB  那为什么能占据5G的显存？
+
+运行到2200steps时发散，表示2200个batch，
+每个epoch包含3000/128=24个batch， 所以有91个epoch。  所以干脆70个epoch就进行lr衰减吧, factor 设置为0.2

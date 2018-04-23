@@ -1,19 +1,5 @@
-"""Evaluation for CIFAR-10.
-
-Accuracy:
-hw2_train.py achieves 83.0% accuracy after 100K steps (256 epochs
-of data) as judged by hw2_eval.py.
-
-Speed:
-On a single Tesla K40, hw2_train.py processes a single batch of 128 images
-in 0.25-0.35 sec (i.e. 350 - 600 images /sec). The model reaches ~86%
-accuracy after 100K steps in 8 hours of training time.
-
-Usage:
-Please see the tutorial and website for how to download the CIFAR-10
-data set, compile the program and train the model.
-
-http://tensorflow.org/tutorials/deep_cnn/
+"""
+Evaluation for hw2.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -22,27 +8,35 @@ from __future__ import print_function
 from datetime import datetime
 import math
 import time
-
+import os
+import configparser
+curPath = os.path.abspath(os.path.dirname(__file__))
+projectRootPath = curPath
 import numpy as np
 import tensorflow as tf
 
+FLAGS = tf.app.flags.FLAGS
+tf.app.flags.DEFINE_string('section', "lenovo",
+						   """where to run this code""")
 import hw2
 
-FLAGS = tf.app.flags.FLAGS
+section = FLAGS.section
+config = configparser.RawConfigParser()
+config_path = projectRootPath + '/' + 'config.cfg'
+config.read(config_path)
 
-tf.app.flags.DEFINE_string('eval_dir', '/tmp/hw2_eval',
+tf.app.flags.DEFINE_string('eval_dir', config.get(section, 'eval_dir'),
                            """Directory where to write event logs.""")
-tf.app.flags.DEFINE_string('eval_data', 'test',
+tf.app.flags.DEFINE_string('eval_data',  config.get(section, 'eval_data'),
                            """Either 'test' or 'train_eval'.""")
-tf.app.flags.DEFINE_string('checkpoint_dir', '/tmp/hw2_train',
+tf.app.flags.DEFINE_string('checkpoint_dir', config.get(section, 'checkpoint_dir'),
                            """Directory where to read model checkpoints.""")
-tf.app.flags.DEFINE_integer('eval_interval_secs', 60 * 5,
+tf.app.flags.DEFINE_integer('eval_interval_secs', config.getint(section, 'eval_interval_secs'),
                             """How often to run the eval.""")
-tf.app.flags.DEFINE_integer('num_examples', 10000,
+tf.app.flags.DEFINE_integer('num_examples', config.getint(section, 'num_examples'),
                             """Number of examples to run.""")
-tf.app.flags.DEFINE_boolean('run_once', False,
+tf.app.flags.DEFINE_boolean('run_once',bool(config.getint(section, 'run_once')),
                          """Whether to run eval only once.""")
-
 
 def eval_once(saver, summary_writer, top_k_op, summary_op):
   """Run Eval once.
@@ -91,7 +85,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
       summary.ParseFromString(sess.run(summary_op))
       summary.value.add(tag='Precision @ 1', simple_value=precision)
       summary_writer.add_summary(summary, global_step)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
       coord.request_stop(e)
 
     coord.request_stop()
@@ -99,11 +93,11 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
 
 
 def evaluate():
-  """Eval CIFAR-10 for a number of steps."""
+  """Eval hw2 for a number of steps."""
   with tf.Graph().as_default() as g:
-    # Get images and labels for CIFAR-10.
-    eval_data = FLAGS.eval_data == 'test'
-    images, labels = hw2.inputs(eval_data=eval_data)
+    # Get images and labels for hw2.
+    is_test_eval = FLAGS.eval_data == 'test'
+    images, labels = hw2.inputs(is_test_eval=is_test_eval)
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
@@ -130,13 +124,11 @@ def evaluate():
       time.sleep(FLAGS.eval_interval_secs)
 
 
-def main(argv=None):  # pylint: disable=unused-argument
-  hw2.maybe_download_and_extract()
+def main(argv=None):
   if tf.gfile.Exists(FLAGS.eval_dir):
     tf.gfile.DeleteRecursively(FLAGS.eval_dir)
   tf.gfile.MakeDirs(FLAGS.eval_dir)
   evaluate()
-
 
 if __name__ == '__main__':
   tf.app.run()

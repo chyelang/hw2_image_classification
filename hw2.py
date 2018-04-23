@@ -133,7 +133,7 @@ def distorted_inputs():
   return images, labels
 
 
-def inputs(eval_data):
+def inputs(is_test_eval):
   """Construct input for hw2 evaluation using the Reader ops.
 
   Args:
@@ -146,10 +146,17 @@ def inputs(eval_data):
   Raises:
     ValueError: If no data_dir
   """
-  if not FLAGS.test_data_path:
-    raise ValueError('Please supply a data_dir')
-  images, labels = hw2_input.inputs(eval_data=eval_data,
-                                        data_dir=FLAGS.test_data_path,
+  if is_test_eval:
+      if not FLAGS.test_data_path:
+        raise ValueError('Please supply test data path')
+      images, labels = hw2_input.inputs(is_test_eval=is_test_eval,
+                                            data_dir=FLAGS.test_data_path,
+                                            batch_size=FLAGS.batch_size)
+  else:
+      if not FLAGS.train_data_path:
+          raise ValueError('Please supply train data path')
+      images, labels = hw2_input.inputs(is_test_eval=is_test_eval,
+                                        data_dir=FLAGS.train_data_path,
                                         batch_size=FLAGS.batch_size)
   if FLAGS.use_fp16:
     images = tf.cast(images, tf.float16)

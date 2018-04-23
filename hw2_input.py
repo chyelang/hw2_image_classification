@@ -47,7 +47,7 @@ def read_hw2(input_queue):
 		depth: number of color channels in the result
 		key: a scalar string Tensor describing the filename & record number
 		  for this example.
-		label: an int32 Tensor
+		label0: an int32 Tensor
 		uint8image: a [height, width, depth] uint8 Tensor with the image data
 	"""
 
@@ -57,7 +57,7 @@ def read_hw2(input_queue):
 	result = Hw2Record()
 
 	label = input_queue[1]
-	# label = input_queue[1].dequeue()
+	# label0 = input_queue[1].dequeue()
 	result.label = tf.cast(label, tf.int32)
 	# result.key, image_file = tf.WholeFileReader().read(input_queue[0])
 	image_file = tf.read_file(input_queue[0])
@@ -201,7 +201,7 @@ def distorted_inputs(data_dir, batch_size):
 
 		# Set the shapes of tensors.
 		float_image.set_shape([height, width, 3])
-		# read_input.label.set_shape([1])
+		# read_input.label0.set_shape([1])
 
 		# Ensure that the random shuffling has good mixing properties.
 		min_fraction_of_examples_in_queue = 0.4
@@ -211,7 +211,7 @@ def distorted_inputs(data_dir, batch_size):
 		print('Filling queue with %d hw2 images before starting to train. '
 			  'This will take a few minutes.' % min_queue_examples)
 	# #for debugging
-	# tmp = _generate_image_and_label_batch(float_image, read_input.label,
+	# tmp = _generate_image_and_label_batch(float_image, read_input.label0,
 	# 									   min_queue_examples, batch_size,
 	# 							  shuffle=False)
 	# with tf.Session() as sess:
@@ -241,7 +241,7 @@ def distorted_inputs(data_dir, batch_size):
 										   shuffle=True)
 
 
-def inputs(eval_data, data_dir, batch_size):
+def inputs(is_test_eval, data_dir, batch_size):
 	"""Construct input for hw2 evaluation using the Reader ops.
 
 	Args:
@@ -263,20 +263,16 @@ def inputs(eval_data, data_dir, batch_size):
 			image_paths.append(data_dir + '/' + image_dir + '/' + image)
 			labels.append(int(label))
 
-	image_paths = tf.convert_to_tensor(image_paths, dtype=tf.string)
-	labels = tf.convert_to_tensor(tf.cast(labels, tf.int32), dtype=tf.int32)
 	# Makes an input queue
 	image_paths_op, labels_op = tf.train.slice_input_producer([image_paths, labels])
-	image_paths_queue = wrap_with_queue(image_paths_op)
-	labels_queue = wrap_with_queue(labels_op, dtypes=tf.int32)
-	if not eval_data:
+	if not is_test_eval:
 		num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
 	else:
 		num_examples_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
 	with tf.name_scope('input'):
 		# Read examples from files in the filename queue.
-		read_input = read_hw2([image_paths_queue, labels_queue])
+		read_input = read_hw2([image_paths_op, labels_op])
 		reshaped_image = tf.cast(read_input.uint8image, tf.float32)
 
 		height = IMAGE_SIZE
@@ -292,7 +288,7 @@ def inputs(eval_data, data_dir, batch_size):
 
 		# Set the shapes of tensors.
 		float_image.set_shape([height, width, 3])
-		read_input.label.set_shape([1])
+		# read_input.label0.set_shape([1])
 
 		# Ensure that the random shuffling has good mixing properties.
 		min_fraction_of_examples_in_queue = 0.4
@@ -303,7 +299,6 @@ def inputs(eval_data, data_dir, batch_size):
 	return _generate_image_and_label_batch(float_image, read_input.label,
 										   min_queue_examples, batch_size,
 										   shuffle=False)
-
 
 if __name__ == '__main__':
 	distorted_inputs("/home/charles/PycharmProjects/hw2_image_classification/data/dset1/train", 5)

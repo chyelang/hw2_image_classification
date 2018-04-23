@@ -85,6 +85,10 @@ def read_hw2(input_queue):
 		new_w, new_h = _resize(initial_width, initial_height, "min")
 		resized_image = tf.image.resize_images(image, [new_w, new_h])
 	result.uint8image = tf.cast(resized_image, tf.uint8)
+	image = tf.expand_dims(image, 0)
+	resized_image = tf.expand_dims(resized_image, 0)
+	tf.summary.image('images_before_resize', image)
+	tf.summary.image('images_after_resize', resized_image)
 	return result
 
 

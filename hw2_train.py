@@ -33,6 +33,8 @@ tf.app.flags.DEFINE_boolean('log_device_placement', bool(config.getint(section, 
 							"""Whether to log device placement.""")
 tf.app.flags.DEFINE_integer('log_frequency', config.getint(section, 'log_frequency'),
 							"""How often to log results to the console.""")
+tf.app.flags.DEFINE_integer('save_checkpoint_secs', config.getint(section, 'save_checkpoint_secs'),
+							"""save_checkpoint_secs""")
 
 
 def train():
@@ -86,12 +88,13 @@ def train():
 		class _EarlyStoppingHook(tf.train.SessionRunHook):
 			"""Hook that requests stop at a specified step."""
 
-			def __init__(self, min_delta=0.001, patience=10):
+			def __init__(self, min_delta=0.01, patience=10):
 				self.patience = patience
 				self.min_delta = min_delta
 				self._ckpt_step = -1
 				self.best = -1
 				self.wait = 0
+				self.current = 0
 
 			def after_run(self, run_context, run_values):
 				ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
@@ -99,29 +102,41 @@ def train():
 					cur_ckpt_step = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
 					if cur_ckpt_step > self._ckpt_step:
 						self._ckpt_step = cur_ckpt_step
-						current = hw2_eval.evaluate()
+						self.current = hw2_eval.evaluate()
 						format_str = '%s: step %d, val_acc = %.2f'
-						print(format_str % (datetime.now(), self._ckpt_step, current))
-						if (current - self.min_delta) > self.best:
-							self.best = current
+						print(format_str % (datetime.now(), self._ckpt_step, self.current))
+
+						if (self.current - self.min_delta) > self.best:
+							self.best = self.current
 							self.wait = 0
 						else:
 							self.wait += 1
 							if self.wait >= self.patience:
 								print('Early stop training!')
 								run_context.request_stop()
+		top_k_op = tf.nn.in_top_k(logits, labels, 1)
+		train_acc = tf.Variable(0,trainable=False, dtype=tf.float32)
+		val_acc = tf.Variable(0, trainable=False, dtype=tf.float32)
+		train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
+												   tf.cast(FLAGS.batch_size, tf.float32)))
+		early_stop_hook = _EarlyStoppingHook(min_delta=0.01, patience=10)
+		val_acc_op = tf.assign(val_acc, early_stop_hook.current)
+		tf.summary.scalar("train_acc", train_acc_op)
+		tf.summary.scalar("val_acc", val_acc_op)
 
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
 					   tf.train.NanTensorHook(loss),
 					   _LoggerHook(),
-					   _EarlyStoppingHook(min_delta=0.001, patience=10)],
+					   early_stop_hook],
+				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():
 				mon_sess.run(train_op)
-
+				mon_sess.run(train_acc_op)
+				mon_sess.run(val_acc_op)
 
 def main(argv=None):
 	# # why to delete? 因为此处的train_dir只是存放log和checkpoint的，并不是训练数据

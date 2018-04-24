@@ -17,6 +17,7 @@ tf.app.flags.DEFINE_string('section', "lenovo",
 						   """where to run this code""")
 
 import hw2
+import hw2_eval
 
 section = FLAGS.section
 config = configparser.RawConfigParser()
@@ -82,11 +83,40 @@ def train():
 					print(format_str % (datetime.now(), self._step, loss_value,
 										examples_per_sec, sec_per_batch))
 
+		class _EarlyStoppingHook(tf.train.SessionRunHook):
+			"""Hook that requests stop at a specified step."""
+
+			def __init__(self, min_delta=0.001, patience=10):
+				self.patience = patience
+				self.min_delta = min_delta
+				self._ckpt_step = -1
+				self.best = -1
+				self.wait = 0
+
+			def after_run(self, run_context, run_values):
+				ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
+				if ckpt and ckpt.model_checkpoint_path:
+					cur_ckpt_step = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
+					if cur_ckpt_step > self._ckpt_step:
+						self._ckpt_step = cur_ckpt_step
+						current = hw2_eval.evaluate()
+						format_str = '%s: step %d, val_acc = %.2f'
+						print(format_str % (datetime.now(), self._ckpt_step, current))
+						if (current - self.min_delta) > self.best:
+							self.best = current
+							self.wait = 0
+						else:
+							self.wait += 1
+							if self.wait >= self.patience:
+								print('Early stop training!')
+								run_context.request_stop()
+
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
 					   tf.train.NanTensorHook(loss),
-					   _LoggerHook()],
+					   _LoggerHook(),
+					   _EarlyStoppingHook(min_delta=0.001, patience=10)],
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():
@@ -99,7 +129,6 @@ def main(argv=None):
 		tf.gfile.DeleteRecursively(FLAGS.log_path)
 	tf.gfile.MakeDirs(FLAGS.log_path)
 	train()
-
 
 if __name__ == '__main__':
 	tf.app.run()

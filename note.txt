@@ -26,3 +26,7 @@ ecm机器上，K80算两个gpu，设备列表如下：
 运行到2200steps时发散，表示2200个batch，
 每个epoch包含3000/128=24个batch， 所以有91个epoch。  所以干脆70个epoch就进行lr衰减吧, factor 设置为0.2
 res：最终的lr下降到了一个比较小的数值，最终的loss始终在11.3左右徘徊，但这个其实也包含了weight正则项带来的loss，需要考虑新的训练方法。
+res : train accuracy 0.946 or 0.954, test accuracy 0.314
+
+0424
+对变量做滑动平均有利于提升效果

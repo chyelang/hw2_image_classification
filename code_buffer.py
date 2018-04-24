@@ -32,3 +32,64 @@ from tensorflow.python.client import device_lib
 local_device_protos = device_lib.list_local_devices()
 for x in local_device_protos:
 	print(x.name)
+
+
+import numpy as np
+import tensorflow as tf
+import logging
+from tensorflow.python.training import session_run_hook
+
+
+class EarlyStoppingHook(session_run_hook.SessionRunHook):
+    """Hook that requests stop at a specified step."""
+
+    def __init__(self, monitor='val_loss', min_delta=0, patience=0,
+                 mode='auto'):
+        """
+        """
+        self.monitor = monitor
+        self.patience = patience
+        self.min_delta = min_delta
+        self.wait = 0
+        if mode not in ['auto', 'min', 'max']:
+            logging.warning('EarlyStopping mode %s is unknown, '
+                            'fallback to auto mode.', mode, RuntimeWarning)
+            mode = 'auto'
+
+        if mode == 'min':
+            self.monitor_op = np.less
+        elif mode == 'max':
+            self.monitor_op = np.greater
+        else:
+            if 'acc' in self.monitor:
+                self.monitor_op = np.greater
+            else:
+                self.monitor_op = np.less
+
+        if self.monitor_op == np.greater:
+            self.min_delta *= 1
+        else:
+            self.min_delta *= -1
+
+        self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+
+    def begin(self):
+        # Convert names to tensors if given
+        graph = tf.get_default_graph()
+        self.monitor = graph.as_graph_element(self.monitor)
+        if isinstance(self.monitor, tf.Operation):
+            self.monitor = self.monitor.outputs[0]
+
+    def before_run(self, run_context):  # pylint: disable=unused-argument
+        return session_run_hook.SessionRunArgs(self.monitor)
+
+    def after_run(self, run_context, run_values):
+        current = run_values.results
+
+        if self.monitor_op(current - self.min_delta, self.best):
+            self.best = current
+            self.wait = 0
+        else:
+            self.wait += 1
+            if self.wait >= self.patience:
+                run_context.request_stop()

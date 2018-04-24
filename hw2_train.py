@@ -68,7 +68,7 @@ def train():
 
 			def before_run(self, run_context):
 				self._step += 1
-				return tf.train.SessionRunArgs(loss)  # Asks for loss value.
+				return tf.train.SessionRunArgs([loss, train_acc])  # Asks for loss value.
 
 			def after_run(self, run_context, run_values):
 				if self._step % FLAGS.log_frequency == 0:
@@ -76,13 +76,14 @@ def train():
 					duration = current_time - self._start_time
 					self._start_time = current_time
 
-					loss_value = run_values.results
+					loss_value = run_values.results[0]
+					train_acc_val = run_values.results[1]
 					examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
 					sec_per_batch = float(duration / FLAGS.log_frequency)
 
-					format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+					format_str = ('%s: step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
 								  'sec/batch)')
-					print(format_str % (datetime.now(), self._step, loss_value,
+					print(format_str % (datetime.now(), self._step, loss_value, train_acc_val,
 										examples_per_sec, sec_per_batch))
 
 		class _EarlyStoppingHook(tf.train.SessionRunHook):
@@ -119,9 +120,10 @@ def train():
 		val_acc = tf.Variable(0, trainable=False, dtype=tf.float32)
 		train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
 												   tf.cast(FLAGS.batch_size, tf.float32)))
+		tf.summary.scalar("train_acc", train_acc_op)
+
 		early_stop_hook = _EarlyStoppingHook(min_delta=0.01, patience=10)
 		val_acc_op = tf.assign(val_acc, early_stop_hook.current)
-		tf.summary.scalar("train_acc", train_acc_op)
 		tf.summary.scalar("val_acc", val_acc_op)
 
 		with tf.train.MonitoredTrainingSession(

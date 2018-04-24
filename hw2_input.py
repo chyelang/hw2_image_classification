@@ -17,9 +17,9 @@ import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 # Resize the original images to this size. (the small edge)
-IMAGE_RESIZE = 160
+IMAGE_RESIZE = 240
 # Process images of this size.
-IMAGE_SIZE = 120
+IMAGE_SIZE = 180
 import configparser
 
 # parse arguments passed by command line by FLAGS

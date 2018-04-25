@@ -201,7 +201,7 @@ def inference(images):
 
 	with tf.variable_scope('conv_stack2') as scope:
 		kernel_list = [[3,3,64,128],[3,3,128,128]]
-		stride_list = [[1,1,1,1],[1,1,1,1]]
+		stride_list = [[1,2,2,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
 		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = True)
 
@@ -224,7 +224,7 @@ def inference(images):
 		inception1 = layers.inception_v1_module(pool3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
 
 	# pool4
-	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
 						   padding='SAME', name='pool4')
 
 	# inception2

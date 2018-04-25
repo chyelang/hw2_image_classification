@@ -209,23 +209,23 @@ def inference(images):
 
 	# pool2
 	pool2 = tf.nn.max_pool(conv_stack2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool1')
+						   padding='SAME', name='pool2')
 	# norm2
 	norm2 = tf.nn.lrn(pool2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm1')
+					  name='norm2')
 
 	with tf.variable_scope('conv_stack3') as scope:
 		kernel_list = [[3,3,128,256],[3,3,256,256]]
 		stride_list = [[1,1,1,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
-		conv_stack3 = layers.conv2d_stack(conv_stack2, kernel_list, stride_list, padding_list)
+		conv_stack3 = layers.conv2d_stack(norm2, kernel_list, stride_list, padding_list)
 
 	# pool3
 	pool3 = tf.nn.max_pool(conv_stack3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool1')
+						   padding='SAME', name='pool3')
 	# norm3
 	norm3 = tf.nn.lrn(pool3, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm1')
+					  name='norm3')
 
 	# inception1
 	with tf.variable_scope('inception1') as scope:
@@ -233,10 +233,10 @@ def inference(images):
 
 	# pool4
 	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool1')
+						   padding='SAME', name='pool4')
 	# norm4
 	norm4 = tf.nn.lrn(pool4, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm1')
+					  name='norm4')
 
 	# inception1
 	with tf.variable_scope('inception2') as scope:
@@ -244,10 +244,10 @@ def inference(images):
 
 	# pool5
 	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool1')
+						   padding='SAME', name='pool5')
 	# norm5
 	norm5 = tf.nn.lrn(pool5, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm1')
+					  name='norm5')
 
 	# local1
 	with tf.variable_scope('local1') as scope:
@@ -264,7 +264,7 @@ def inference(images):
 		_activation_summary(local1)
 
 	# dropout1
-	drop_out1 = tf.nn.dropout(local1, 0.7)
+	drop_out1 = tf.nn.dropout(local1, 0.5)
 
 	# local2
 	with tf.variable_scope('local2') as scope:

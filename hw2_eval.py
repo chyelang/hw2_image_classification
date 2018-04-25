@@ -39,7 +39,6 @@ tf.app.flags.DEFINE_integer('num_examples', config.getint(section, 'num_examples
 tf.app.flags.DEFINE_boolean('run_once', bool(config.getint(section, 'run_once')),
 							"""Whether to run eval only once.""")
 
-
 def eval_once(saver, summary_writer, top_k_op, summary_op, acc):
 	"""Run Eval once.
 

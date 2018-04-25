@@ -3,21 +3,16 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-
 curPath = os.path.abspath(os.path.dirname(__file__))
 projectRootPath = curPath
-import re
-import sys
-import math
-import datetime
 import tensorflow as tf
 import configparser
-import numpy as np
-import logging
-from tensorflow.python.training import session_run_hook
 
 import hw2_input
 import layers
+from utils import _variable_on_cpu
+from utils import _variable_with_weight_decay
+from utils import _activation_summary
 
 # parse arguments passed by command line by FLAGS
 FLAGS = tf.app.flags.FLAGS
@@ -50,76 +45,6 @@ NUM_EPOCHS_PER_DECAY = 70  # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.2  # Learning rate decay factor.
 # INITIAL_LEARNING_RATE = 0.1       # Initial learning rate. for gradient desent
 INITIAL_LEARNING_RATE = 0.001  # Initial learning rate. for adam
-
-# If a model is trained with multiple GPUs, prefix all Op names with tower_name
-# to differentiate the operations. Note that this prefix is removed from the
-# names of the summaries when visualizing a model.
-TOWER_NAME = 'tower'
-
-
-def _activation_summary(x):
-	"""Helper to create summaries for activations.
-
-	Creates a summary that provides a histogram of activations.
-	Creates a summary that measures the sparsity of activations.
-
-	Args:
-	  x: Tensor
-	Returns:
-	  nothing
-	"""
-	# Remove 'tower_[0-9]/' from the name in case this is a multi-GPU training
-	# session. This helps the clarity of presentation on tensorboard.
-	tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name)
-	tf.summary.histogram(tensor_name + '/activations', x)
-	tf.summary.scalar(tensor_name + '/sparsity',
-					  tf.nn.zero_fraction(x))
-
-
-def _variable_on_cpu(name, shape, initializer):
-	"""Helper to create a Variable stored on CPU memory.
-
-	Args:
-	  name: name of the variable
-	  shape: list of ints
-	  initializer: initializer for Variable
-
-	Returns:
-	  Variable Tensor
-	"""
-	# ('/cpu:0')########### /device:GPU:0
-	with tf.device('/cpu:0'):
-		dtype = tf.float16 if FLAGS.use_fp16 else tf.float32
-		var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype)
-	return var
-
-
-## wd is lambda in regularization
-def _variable_with_weight_decay(name, shape, stddev, wd):
-	"""Helper to create an initialized Variable with weight decay.
-
-	Note that the Variable is initialized with a truncated normal distribution.
-	A weight decay is added only if one is specified.
-
-	Args:
-	  name: name of the variable
-	  shape: list of ints
-	  stddev: standard deviation of a truncated Gaussian
-	  wd: add L2Loss weight decay multiplied by this float. If None, weight
-		  decay is not added for this Variable.
-
-	Returns:
-	  Variable Tensor
-	"""
-	dtype = tf.float16 if FLAGS.use_fp16 else tf.float32
-	var = _variable_on_cpu(
-		name,
-		shape,
-		tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
-	if wd is not None:
-		weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-		tf.add_to_collection('losses', weight_decay)
-	return var
 
 
 def distorted_inputs():
@@ -172,8 +97,6 @@ def inputs(is_test_eval):
 		labels = tf.cast(labels, tf.float16)
 	return images, labels
 
-
-# 借鉴了VGG inception1 的设计
 def inference(images):
 	"""Build the hw2 model.
 
@@ -203,7 +126,7 @@ def inference(images):
 		kernel_list = [[3,3,64,128],[3,3,128,128]]
 		stride_list = [[1,2,2,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
-		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = True)
+		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = False)
 
 	# pool2
 	pool2 = tf.nn.max_pool(conv_stack2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -229,7 +152,7 @@ def inference(images):
 
 	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v1_module(pool4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
+		inception2 = layers.inception_v1_module(pool4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=False)
 
 	# pool5
 	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -243,7 +166,7 @@ def inference(images):
 		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 2048, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
+		dense1 = layers.dense_layer(reshape, dim, 2048, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-3)
 
 	# dense2
 	with tf.variable_scope('dense2') as scope:

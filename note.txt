@@ -34,3 +34,5 @@ res : train accuracy 0.946 or 0.954, test accuracy 0.314
 0425
 连夜搭建的复杂模型val acc也只是到了0.38，train acc 为0.6，可能跟early stop设置的阈值太小训练时间不够有关系？
 0425v1_1: 修改错误之后，该模型train_acc 0.8, val_acc 0.42
+
+0425v4 给每一层都加入了BN，发现训练变慢了很多，因为BN中也有需要训练的参数吧。但存在过拟合问题，train 0.9， test 0.52

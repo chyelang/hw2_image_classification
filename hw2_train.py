@@ -36,7 +36,8 @@ tf.app.flags.DEFINE_integer('log_frequency', config.getint(section, 'log_frequen
 tf.app.flags.DEFINE_integer('save_checkpoint_secs', config.getint(section, 'save_checkpoint_secs'),
 							"""save_checkpoint_secs""")
 
-
+current_val_acc = 0
+val_acc_update = False
 def train():
 	"""Train hw2 for a number of steps."""
 	with tf.Graph().as_default():
@@ -58,6 +59,12 @@ def train():
 		# Build a Graph that trains the model with one batch of examples and
 		# updates the model parameters.
 		train_op = hw2.train(loss, global_step)
+		with tf.variable_scope("acc_monitor") as scope:
+			top_k_op = tf.nn.in_top_k(logits, labels, 1)
+			train_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="train_acc")
+			train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
+													   tf.cast(FLAGS.batch_size, tf.float32)))
+			tf.summary.scalar("train_acc", train_acc_op)
 
 		class _LoggerHook(tf.train.SessionRunHook):
 			"""Logs loss and runtime."""
@@ -80,7 +87,6 @@ def train():
 					train_acc_val = run_values.results[1]
 					examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
 					sec_per_batch = float(duration / FLAGS.log_frequency)
-
 					format_str = ('%s: step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
 								  'sec/batch)')
 					print(format_str % (datetime.now(), self._step, loss_value, train_acc_val,
@@ -106,7 +112,6 @@ def train():
 						self.current = hw2_eval.evaluate()
 						format_str = '%s: step %d, val_acc = %.2f'
 						print(format_str % (datetime.now(), self._ckpt_step, self.current))
-
 						if (self.current - self.min_delta) > self.best:
 							self.best = self.current
 							self.wait = 0
@@ -115,24 +120,10 @@ def train():
 							if self.wait >= self.patience:
 								print('Early stop training!')
 								run_context.request_stop()
-			def get_current_acc(self):
-				return self.current
-
-		with tf.variable_scope("acc_monitor") as scope:
-			top_k_op = tf.nn.in_top_k(logits, labels, 1)
-			train_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="train_acc")
-			train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
-													   tf.cast(FLAGS.batch_size, tf.float32)))
-			tf.summary.scalar("train_acc", train_acc_op)
-
-			val_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="val_acc")
-			early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
-			val_acc_op = tf.assign(val_acc, early_stop_hook.get_current_acc())
-			tf.summary.scalar("val_acc", val_acc_op)
 
 		keep_prob1 = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
 		keep_prob2 = tf.get_default_graph().get_tensor_by_name('dense2/keep_prob:0')
-
+		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
@@ -145,10 +136,6 @@ def train():
 			while not mon_sess.should_stop():
 				mon_sess.run(train_op, feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
 				mon_sess.run(train_acc_op)
-				mon_sess.run(val_acc_op)
-				# mon_sess.run([train_op, keep_prob1, keep_prob2], feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
-				# mon_sess.run([train_acc_op,keep_prob1, keep_prob2])
-				# mon_sess.run([val_acc_op, keep_prob1, keep_prob2])
 
 def main(argv=None):
 	# # why to delete? 因为此处的train_dir只是存放log和checkpoint的，并不是训练数据

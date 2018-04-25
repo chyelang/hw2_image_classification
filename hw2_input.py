@@ -16,10 +16,6 @@ import logging
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-# Resize the original images to this size. (the small edge)
-IMAGE_RESIZE = 250
-# Process images of this size.
-IMAGE_SIZE = 200
 import configparser
 
 # parse arguments passed by command line by FLAGS
@@ -32,6 +28,10 @@ config.read(config_path)
 NUM_CLASSES = config.getint(section, 'NUM_CLASSES')
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = config.getint(section, 'NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN')
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = config.getint(section, 'NUM_EXAMPLES_PER_EPOCH_FOR_EVAL')
+# Resize the original images to this size. (the small edge)
+IMAGE_RESIZE = config.getint(section, 'IMAGE_RESIZE')
+# Process images of this size.
+IMAGE_SIZE = config.getint(section, 'IMAGE_SIZE')
 
 
 def read_hw2(input_queue):

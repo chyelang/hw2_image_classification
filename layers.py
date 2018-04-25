@@ -93,7 +93,7 @@ def conv2d_stack(feed, kernel_list, stride_list, padding_list):
 			conv = conv2d(inputs[-1], kernel, stride_list[i], padding=padding_list[i])
 			biases = _variable_on_cpu('biases', kernel_list[i][-1], tf.constant_initializer(0.0))
 			pre_activation = tf.nn.bias_add(conv, biases)
-			conv1 = tf.nn.relu(pre_activation, name=scope.name)
+			conv1 = tf.nn.relu(pre_activation, name='activated_out')
 			_activation_summary(conv1)
 			inputs.append(conv1)
 	return inputs[-1]
@@ -113,58 +113,58 @@ def inception_v1_moduel(feed, feed_dim=256, map_size=(128,192,96,64), reduce1x1_
 		return tf.nn.max_pool(x, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1], padding='SAME')
 
 	# follows input
-	W_conv1_1x1_1 = _variable_with_weight_decay('W_conv1_1x1_1',
+	W_conv_1x1_1 = _variable_with_weight_decay('W_conv_1x1_1',
 												shape=[1, 1, feed_dim, map_size[0]],
 												stddev=5e-2,
 												wd=None)
-	b_conv1_1x1_1 = _variable_on_cpu('b_conv1_1x1_1', [map_size[0]], tf.constant_initializer(0.0))
+	b_conv_1x1_1 = _variable_on_cpu('b_conv_1x1_1', [map_size[0]], tf.constant_initializer(0.0))
 
 	# follows input
-	W_conv1_1x1_2 = _variable_with_weight_decay('W_conv1_1x1_2',
+	W_conv_1x1_2 = _variable_with_weight_decay('W_conv_1x1_2',
 												shape=[1, 1, feed_dim, reduce1x1_size],
 												stddev=5e-2,
 												wd=None)
-	b_conv1_1x1_2 = _variable_on_cpu('b_conv1_1x1_2', [reduce1x1_size], tf.constant_initializer(0.0))
+	b_conv_1x1_2 = _variable_on_cpu('b_conv_1x1_2', [reduce1x1_size], tf.constant_initializer(0.0))
 
 	# follows input
-	W_conv1_1x1_3 = _variable_with_weight_decay('W_conv1_1x1_3',
+	W_conv_1x1_3 = _variable_with_weight_decay('W_conv_1x1_3',
 												shape=[1, 1, feed_dim, reduce1x1_size],
 												stddev=5e-2,
 												wd=None)
-	b_conv1_1x1_3 = _variable_on_cpu('b_conv1_1x1_3', [reduce1x1_size], tf.constant_initializer(0.0))
+	b_conv_1x1_3 = _variable_on_cpu('b_conv_1x1_3', [reduce1x1_size], tf.constant_initializer(0.0))
 
 	# follows 1x1_2
-	W_conv1_3x3 = _variable_with_weight_decay('W_conv1_3x3',
+	W_conv_3x3 = _variable_with_weight_decay('W_conv_3x3',
 												shape=[1, 1, reduce1x1_size, map_size[1]],
 												stddev=5e-2,
 												wd=None)
-	b_conv1_3x3 = _variable_on_cpu('b_conv1_3x3', [map_size[1]], tf.constant_initializer(0.0))
+	b_conv_3x3 = _variable_on_cpu('b_conv_3x3', [map_size[1]], tf.constant_initializer(0.0))
 
 	# follows 1x1_3
-	W_conv1_5x5 = _variable_with_weight_decay('W_conv1_5x5',
+	W_conv_5x5 = _variable_with_weight_decay('W_conv_5x5',
 												shape=[1, 1, reduce1x1_size, map_size[2]],
 												stddev=5e-2,
 												wd=None)
-	b_conv1_5x5 = _variable_on_cpu('b_conv1_5x5', [map_size[2]], tf.constant_initializer(0.0))
+	b_conv_5x5 = _variable_on_cpu('b_conv_5x5', [map_size[2]], tf.constant_initializer(0.0))
 
 	# follows max pooling
-	W_conv1_1x1_4 = _variable_with_weight_decay('W_conv1_1x1_4',
+	W_conv_1x1_4 = _variable_with_weight_decay('W_conv_1x1_4',
 												shape=[1, 1, feed_dim, map_size[3]],
 												stddev=5e-2,
 												wd=None)
-	b_conv1_1x1_4 = _variable_on_cpu('b_conv1_1x1_4', [map_size[3]], tf.constant_initializer(0.0))
+	b_conv_1x1_4 = _variable_on_cpu('b_conv_1x1_4', [map_size[3]], tf.constant_initializer(0.0))
 
 	# Inception Module
-	conv1_1x1_1 = conv2d_s1(feed, W_conv1_1x1_1) + b_conv1_1x1_1
-	conv1_1x1_2 = tf.nn.relu(conv2d_s1(feed, W_conv1_1x1_2) + b_conv1_1x1_2)
-	conv1_1x1_3 = tf.nn.relu(conv2d_s1(feed, W_conv1_1x1_3) + b_conv1_1x1_3)
-	conv1_3x3 = conv2d_s1(conv1_1x1_2, W_conv1_3x3) + b_conv1_3x3
-	conv1_5x5 = conv2d_s1(conv1_1x1_3, W_conv1_5x5) + b_conv1_5x5
+	conv_1x1_1 = conv2d_s1(feed, W_conv_1x1_1) + b_conv_1x1_1
+	conv_1x1_2 = tf.nn.relu(conv2d_s1(feed, W_conv_1x1_2) + b_conv_1x1_2)
+	conv_1x1_3 = tf.nn.relu(conv2d_s1(feed, W_conv_1x1_3) + b_conv_1x1_3)
+	conv_3x3 = conv2d_s1(conv_1x1_2, W_conv_3x3) + b_conv_3x3
+	conv_5x5 = conv2d_s1(conv_1x1_3, W_conv_5x5) + b_conv_5x5
 	maxpool1 = max_pool_3x3_s1(feed)
-	conv1_1x1_4 = conv2d_s1(maxpool1, W_conv1_1x1_4) + b_conv1_1x1_4
+	conv_1x1_4 = conv2d_s1(maxpool1, W_conv_1x1_4) + b_conv_1x1_4
 
 	# concatenate all the feature maps and hit them with a relu
-	concat = tf.concat([conv1_1x1_1, conv1_3x3, conv1_5x5, conv1_1x1_4], 3)
+	concat = tf.concat([conv_1x1_1, conv_3x3, conv_5x5, conv_1x1_4], 3)
 	inception = tf.nn.relu(concat, name=name)
 	_activation_summary(inception)
 	return inception

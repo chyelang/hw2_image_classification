@@ -115,28 +115,35 @@ def train():
 							if self.wait >= self.patience:
 								print('Early stop training!')
 								run_context.request_stop()
-		top_k_op = tf.nn.in_top_k(logits, labels, 1)
-		train_acc = tf.Variable(0,trainable=False, dtype=tf.float32)
-		val_acc = tf.Variable(0, trainable=False, dtype=tf.float32)
-		train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
-												   tf.cast(FLAGS.batch_size, tf.float32)))
-		tf.summary.scalar("train_acc", train_acc_op)
 
-		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
-		val_acc_op = tf.assign(val_acc, early_stop_hook.current)
-		tf.summary.scalar("val_acc", val_acc_op)
+		with tf.variable_scope("acc_monitor") as scope:
+			top_k_op = tf.nn.in_top_k(logits, labels, 1)
+			train_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="train_acc")
+			val_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="val_acc")
+			train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
+													   tf.cast(FLAGS.batch_size, tf.float32)))
+			tf.summary.scalar("train_acc", train_acc_op)
+
+			early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
+			val_acc_op = tf.assign(val_acc, early_stop_hook.current)
+			tf.summary.scalar("val_acc", val_acc_op)
+
+		with tf.variable_scope("drop_out1", reuse=True):
+			keep_prob1 = tf.get_default_graph().get_tensor_by_name('drop_out1/keep_prob1:0')
+		with tf.variable_scope("drop_out2", reuse=True):
+			keep_prob2 = tf.get_default_graph().get_tensor_by_name('drop_out2/keep_prob2:0')
 
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
 					   tf.train.NanTensorHook(loss),
 					   _LoggerHook(),
-					   early_stop_hook],
+					    early_stop_hook],
 				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op)
+				mon_sess.run(train_op, feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
 				mon_sess.run(train_acc_op)
 				mon_sess.run(val_acc_op)
 

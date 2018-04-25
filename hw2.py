@@ -238,9 +238,9 @@ def inference(images):
 	norm4 = tf.nn.lrn(pool4, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
 					  name='norm4')
 
-	# inception1
+	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v1_moduel(norm3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, name = scope.name)
+		inception2 = layers.inception_v1_moduel(norm4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, name = scope.name)
 
 	# pool5
 	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -264,7 +264,9 @@ def inference(images):
 		_activation_summary(local1)
 
 	# dropout1
-	drop_out1 = tf.nn.dropout(local1, 0.5)
+	with tf.variable_scope("drop_out1"):
+		keep_prob1 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob1")
+		drop_out1 = tf.nn.dropout(local1, keep_prob1, name="drop_out1")
 
 	# local2
 	with tf.variable_scope('local2') as scope:
@@ -275,7 +277,9 @@ def inference(images):
 		_activation_summary(local2)
 
 	# dropout2
-	drop_out2 = tf.nn.dropout(local2, 0.5)
+	with tf.variable_scope("drop_out2"):
+		keep_prob2 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob2")
+		drop_out2 = tf.nn.dropout(local2, keep_prob2, name="drop_out2")
 
 	# linear layer(WX + b),
 	# We don't apply softmax here because

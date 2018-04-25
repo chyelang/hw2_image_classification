@@ -229,7 +229,7 @@ def inference(images):
 
 	# inception1
 	with tf.variable_scope('inception1') as scope:
-		inception1 = layers.inception_v1_moduel(norm3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64)
+		inception1 = layers.inception_v1_moduel(norm3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, name = scope.name)
 
 	# pool4
 	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -240,7 +240,7 @@ def inference(images):
 
 	# inception1
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v1_moduel(norm3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64)
+		inception2 = layers.inception_v1_moduel(norm3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, name = scope.name)
 
 	# pool5
 	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],

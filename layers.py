@@ -98,7 +98,7 @@ def conv2d_stack(feed, kernel_list, stride_list, padding_list):
 			inputs.append(conv1)
 	return inputs[-1]
 
-def inception_v1_moduel(feed, feed_dim=256, map_size=(128,192,96,64), reduce1x1_size=64):
+def inception_v1_moduel(feed, feed_dim=256, map_size=(128,192,96,64), reduce1x1_size=64, name):
 	"""
 	:param feed: 
 	:param map_size: lists of number of feature maps output by each tower (1x1, 3x3, 5x5, 1x1) inside the Inception module
@@ -165,7 +165,8 @@ def inception_v1_moduel(feed, feed_dim=256, map_size=(128,192,96,64), reduce1x1_
 
 	# concatenate all the feature maps and hit them with a relu
 	concat = tf.concat([conv1_1x1_1, conv1_3x3, conv1_5x5, conv1_1x1_4], 3)
-	inception = tf.nn.relu(concat)
+	inception = tf.nn.relu(concat, name=name)
+	_activation_summary(inception)
 	return inception
 
 if __name__ == '__main__':

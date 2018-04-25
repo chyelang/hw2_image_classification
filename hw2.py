@@ -126,7 +126,7 @@ def inference(images):
 		kernel_list = [[3,3,64,128],[3,3,128,128]]
 		stride_list = [[1,2,2,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
-		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = False)
+		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = True)
 
 	# pool2
 	pool2 = tf.nn.max_pool(conv_stack2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -152,7 +152,7 @@ def inference(images):
 
 	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v1_module(pool4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=False)
+		inception2 = layers.inception_v1_module(pool4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
 
 	# pool5
 	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -171,7 +171,7 @@ def inference(images):
 	# dense2
 	with tf.variable_scope('dense2') as scope:
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense2 = layers.dense_layer(dense1, 2048, 1024, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
+		dense2 = layers.dense_layer(dense1, 2048, 1024, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-3)
 
 	# linear layer(WX + b),
 	# We don't apply softmax here because

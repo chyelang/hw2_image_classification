@@ -36,3 +36,12 @@ res : train accuracy 0.946 or 0.954, test accuracy 0.314
 0425v1_1: 修改错误之后，该模型train_acc 0.8, val_acc 0.42
 
 0425v4 给每一层都加入了BN，发现训练变慢了很多，因为BN中也有需要训练的参数吧。但存在过拟合问题，train 0.9， test 0.52
+
+实现conv2d的思路：
+输入：feed tensor（四阶张量），kernel（三阶），stride, padding
+输出：四阶张量
+步骤：
+计算输出的维度，建立张量
+对输入进行padding
+三个for循环，调用矩阵element wise积进行计算
+返回计算结果

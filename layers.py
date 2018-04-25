@@ -1,5 +1,5 @@
 import tensorflow as tf
-FLAGS = tf.app.flags.FLAGS
+import math
 
 from tensorflow.python.ops.gen_nn_ops import conv2d
 from utils import _variable_on_cpu
@@ -130,6 +130,42 @@ def dense_layer(feed, input_dim, output_dim, dropout=False, keep_prob=None, batc
 	_activation_summary(after_activation)
 
 	return after_activation
+
+def conv2d(input, filter, strides, padding = 'SAME'):
+	# NHWC
+	"""
+
+	:param input:
+	:param filter:
+	:param strides:
+	:param padding:
+	"VALID" only ever drops the right-most columns (or bottom-most rows).
+	"SAME" tries to pad evenly left and right, but if the amount of columns to
+	 be added is odd, it will add the extra column to the right, as is the case
+	 in this example (the same logic applies vertically: there may be an extra
+	 row of zeros at the bottom).
+	:return:
+	"""
+	in_dims = input.get_shape().as_list()
+	filter_dims = filter.get_shape().as_list()
+	out_dims = [in_dims[0], 0, 0, filter_dims[-1]]
+	if padding == "SAME":
+		out_dims[1] = math.ceil(float(in_dims[1])/float(strides[1]))
+		out_dims[2] = math.ceil(float(in_dims[2]) / float(strides[2]))
+		delta_H = strides[1]*(out_dims[1]-1) + filter_dims[1] - in_dims[1]
+		delta_W = strides[2] * (out_dims[2] - 1) + filter_dims[2] - in_dims[2]
+		paddings = tf.constant([[0, 0], [math.floor(delta_H/2.0), math.ceil(delta_H/2.0)],
+								[math.floor(delta_W/2.0), math.ceil(delta_W/2.0)], [0, 0]])
+		input = tf.pad(input, paddings, "CONSTANT")
+
+	elif padding == "VALID":
+		out_dims[1] = math.ceil(float(in_dims[1] - filter_dims[1] + 1)
+								/ float(strides[1]))
+		out_dims[2] = math.ceil(float(in_dims[2] - filter_dims[2] + 1)
+								/ float(strides[2]))
+
+	else:
+		return
 
 
 if __name__ == '__main__':

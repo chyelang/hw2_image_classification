@@ -122,7 +122,7 @@ def train():
 												   tf.cast(FLAGS.batch_size, tf.float32)))
 		tf.summary.scalar("train_acc", train_acc_op)
 
-		early_stop_hook = _EarlyStoppingHook(min_delta=0.01, patience=10)
+		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
 		val_acc_op = tf.assign(val_acc, early_stop_hook.current)
 		tf.summary.scalar("val_acc", val_acc_op)
 

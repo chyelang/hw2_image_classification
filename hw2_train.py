@@ -115,23 +115,23 @@ def train():
 							if self.wait >= self.patience:
 								print('Early stop training!')
 								run_context.request_stop()
+			def get_current_acc(self):
+				return self.current
 
 		with tf.variable_scope("acc_monitor") as scope:
 			top_k_op = tf.nn.in_top_k(logits, labels, 1)
 			train_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="train_acc")
-			val_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="val_acc")
 			train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
 													   tf.cast(FLAGS.batch_size, tf.float32)))
 			tf.summary.scalar("train_acc", train_acc_op)
 
+			val_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="val_acc")
 			early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
-			val_acc_op = tf.assign(val_acc, early_stop_hook.current)
+			val_acc_op = tf.assign(val_acc, early_stop_hook.get_current_acc())
 			tf.summary.scalar("val_acc", val_acc_op)
 
-		with tf.variable_scope("drop_out1", reuse=True):
-			keep_prob1 = tf.get_default_graph().get_tensor_by_name('drop_out1/keep_prob1:0')
-		with tf.variable_scope("drop_out2", reuse=True):
-			keep_prob2 = tf.get_default_graph().get_tensor_by_name('drop_out2/keep_prob2:0')
+		keep_prob1 = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
+		keep_prob2 = tf.get_default_graph().get_tensor_by_name('dense2/keep_prob:0')
 
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
@@ -146,6 +146,9 @@ def train():
 				mon_sess.run(train_op, feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
 				mon_sess.run(train_acc_op)
 				mon_sess.run(val_acc_op)
+				# mon_sess.run([train_op, keep_prob1, keep_prob2], feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
+				# mon_sess.run([train_acc_op,keep_prob1, keep_prob2])
+				# mon_sess.run([val_acc_op, keep_prob1, keep_prob2])
 
 def main(argv=None):
 	# # why to delete? 因为此处的train_dir只是存放log和checkpoint的，并不是训练数据

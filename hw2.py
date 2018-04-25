@@ -190,96 +190,65 @@ def inference(images):
 	#
 	# conv_stack1
 	with tf.variable_scope('conv_stack1') as scope:
-		kernel_list = [[3,3,3,64],[3,3,64,64]]
-		stride_list = [[1,2,2,1],[1,2,2,1]]
-		padding_list = ['SAME','SAME']
-		conv_stack1 = layers.conv2d_stack(images, kernel_list, stride_list, padding_list)
+		kernel_list = [[3,3,3,64], [3,3,64,64]]
+		stride_list = [[1,1,1,1], [1,2,2,1]]
+		padding_list = ['SAME', 'SAME']
+		conv_stack1 = layers.conv2d_stack(images, kernel_list, stride_list, padding_list, batch_norm = True)
 
 	# pool1
-	pool1 = tf.nn.max_pool(conv_stack1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+	pool1 = tf.nn.max_pool(conv_stack1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
 						   padding='SAME', name='pool1')
-	# norm1 是否需要每个conv后面都加一下？
-	norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm1')
+
 	with tf.variable_scope('conv_stack2') as scope:
 		kernel_list = [[3,3,64,128],[3,3,128,128]]
 		stride_list = [[1,1,1,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
-		conv_stack2 = layers.conv2d_stack(norm1 , kernel_list, stride_list, padding_list)
+		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = True)
 
 	# pool2
 	pool2 = tf.nn.max_pool(conv_stack2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool2')
-	# norm2
-	norm2 = tf.nn.lrn(pool2, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm2')
 
 	with tf.variable_scope('conv_stack3') as scope:
 		kernel_list = [[3,3,128,256],[3,3,256,256]]
 		stride_list = [[1,1,1,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
-		conv_stack3 = layers.conv2d_stack(norm2, kernel_list, stride_list, padding_list)
+		conv_stack3 = layers.conv2d_stack(pool2, kernel_list, stride_list, padding_list, batch_norm = True)
 
 	# pool3
 	pool3 = tf.nn.max_pool(conv_stack3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool3')
-	# norm3
-	norm3 = tf.nn.lrn(pool3, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm3')
 
 	# inception1
 	with tf.variable_scope('inception1') as scope:
-		inception1 = layers.inception_v1_moduel(norm3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, name = scope.name)
+		inception1 = layers.inception_v1_module(pool3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
 
 	# pool4
 	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool4')
-	# norm4
-	norm4 = tf.nn.lrn(pool4, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm4')
 
 	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v1_moduel(norm4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, name = scope.name)
+		inception2 = layers.inception_v1_module(pool4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
 
 	# pool5
 	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool5')
-	# norm5
-	norm5 = tf.nn.lrn(pool5, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-					  name='norm5')
 
-	# local1
-	with tf.variable_scope('local1') as scope:
+	# dense1
+	with tf.variable_scope('dense1') as scope:
 		# Move everything into depth so we can perform a single matrix multiply.
 		# images is a batch of input images, so images.get_shape().as_list()[0] is the
 		# number of pictures, this op is equivalent to flattent
-		reshape = tf.reshape(norm5, [images.get_shape().as_list()[0], -1])
+		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
-		# for weights, num_rows stands for num_features, num_columns stands for num_output_neurons
-		weights = _variable_with_weight_decay('weights', shape=[dim, 2048],
-											  stddev=0.04, wd=0.004)
-		biases = _variable_on_cpu('biases', [2048], tf.constant_initializer(0.1))
-		local1 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
-		_activation_summary(local1)
+		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
+		dense1 = layers.dense_layer(reshape, dim, 2048, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
 
-	# dropout1
-	with tf.variable_scope("drop_out1"):
-		keep_prob1 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob1")
-		drop_out1 = tf.nn.dropout(local1, keep_prob1, name="drop_out1")
-
-	# local2
-	with tf.variable_scope('local2') as scope:
-		weights = _variable_with_weight_decay('weights', shape=[2048, 1024],
-											  stddev=0.04, wd=0.004)
-		biases = _variable_on_cpu('biases', [1024], tf.constant_initializer(0.1))
-		local2 = tf.nn.relu(tf.matmul(drop_out1, weights) + biases, name=scope.name)
-		_activation_summary(local2)
-
-	# dropout2
-	with tf.variable_scope("drop_out2"):
-		keep_prob2 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob2")
-		drop_out2 = tf.nn.dropout(local2, keep_prob2, name="drop_out2")
+	# dense2
+	with tf.variable_scope('dense2') as scope:
+		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
+		dense2 = layers.dense_layer(dense1, 2048, 1024, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
 
 	# linear layer(WX + b),
 	# We don't apply softmax here because
@@ -290,7 +259,7 @@ def inference(images):
 											  stddev=1 / 1024.0, wd=None)
 		biases = _variable_on_cpu('biases', [NUM_CLASSES],
 								  tf.constant_initializer(0.0))
-		softmax_linear = tf.add(tf.matmul(drop_out2, weights), biases, name=scope.name)
+		softmax_linear = tf.add(tf.matmul(dense2, weights), biases, name=scope.name)
 		_activation_summary(softmax_linear)
 
 	return softmax_linear
@@ -378,13 +347,21 @@ def train(total_loss, global_step):
 
 	# Generate moving averages of all losses and associated summaries.
 	loss_averages_op = _add_loss_summaries(total_loss)
-
+	global_step = tf.train.get_or_create_global_step()
+	lr = tf.cond(tf.less(global_step, 10000),
+				 lambda: tf.constant(0.01),
+				 lambda: tf.cond(tf.less(global_step, 20000),
+								 lambda: tf.constant(0.005),
+								 lambda: tf.cond(tf.less(global_step, 30000),
+												 lambda: tf.constant(0.0025),
+												 lambda: tf.constant(0.001))))
+	tf.summary.scalar('learning_rate', lr)
 	# Compute gradients.
 	with tf.control_dependencies([loss_averages_op]):
 		# opt = tf.train.GradientDescentOptimizer(lr)
-		opt = tf.train.AdamOptimizer(learning_rate=INITIAL_LEARNING_RATE)
-		lr = opt._lr
-		tf.summary.scalar('learning_rate', lr)
+		opt = tf.train.AdamOptimizer(learning_rate=lr)
+		lr_actu = opt._lr
+		tf.summary.scalar('learning_rate_actu', lr_actu)
 		grads = opt.compute_gradients(total_loss)
 
 	# Apply gradients.

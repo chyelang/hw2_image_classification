@@ -349,12 +349,12 @@ def train(total_loss, global_step):
 	loss_averages_op = _add_loss_summaries(total_loss)
 	global_step = tf.train.get_or_create_global_step()
 	lr = tf.cond(tf.less(global_step, 10000),
-				 lambda: tf.constant(0.01),
+				 lambda: tf.constant(0.001),
 				 lambda: tf.cond(tf.less(global_step, 20000),
-								 lambda: tf.constant(0.005),
+								 lambda: tf.constant(0.0005),
 								 lambda: tf.cond(tf.less(global_step, 30000),
-												 lambda: tf.constant(0.0025),
-												 lambda: tf.constant(0.001))))
+												 lambda: tf.constant(0.00025),
+												 lambda: tf.constant(0.00001))))
 	tf.summary.scalar('learning_rate', lr)
 	# Compute gradients.
 	with tf.control_dependencies([loss_averages_op]):

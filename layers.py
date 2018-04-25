@@ -131,7 +131,7 @@ def dense_layer(feed, input_dim, output_dim, dropout=False, keep_prob=None, batc
 
 	return after_activation
 
-def conv2d(input, filter, strides, padding = 'SAME'):
+def conv2d_sub(input, filter, strides, padding = 'SAME'):
 	# NHWC
 	"""
 

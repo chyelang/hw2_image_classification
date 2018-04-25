@@ -98,7 +98,7 @@ def conv2d_stack(feed, kernel_list, stride_list, padding_list):
 			inputs.append(conv1)
 	return inputs[-1]
 
-def inception_v1_moduel(feed, feed_dim=256, map_size=(128,192,96,64), reduce1x1_size=64, name):
+def inception_v1_moduel(feed, feed_dim=256, map_size=(128,192,96,64), reduce1x1_size=64, name="inception_v1"):
 	"""
 	:param feed: 
 	:param map_size: lists of number of feature maps output by each tower (1x1, 3x3, 5x5, 1x1) inside the Inception module

@@ -126,7 +126,7 @@ def inference(images):
 		kernel_list = [[3,3,64,128],[3,3,128,128]]
 		stride_list = [[1,2,2,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
-		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = True)
+		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = False)
 
 	# pool2
 	pool2 = tf.nn.max_pool(conv_stack2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -144,7 +144,7 @@ def inference(images):
 
 	# inception1
 	with tf.variable_scope('inception1') as scope:
-		inception1 = layers.inception_v1_module(pool3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
+		inception1 = layers.inception_v1_module(pool3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=False)
 
 	# pool4
 	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
@@ -274,11 +274,11 @@ def train(total_loss, global_step):
 	loss_averages_op = _add_loss_summaries(total_loss)
 	global_step = tf.train.get_or_create_global_step()
 	lr = tf.cond(tf.less(global_step, 10000),
-				 lambda: tf.constant(0.005),
+				 lambda: tf.constant(0.001),
 				 lambda: tf.cond(tf.less(global_step, 20000),
-								 lambda: tf.constant(0.001),
+								 lambda: tf.constant(0.0005),
 								 lambda: tf.cond(tf.less(global_step, 30000),
-												 lambda: tf.constant(0.0005),
+												 lambda: tf.constant(0.00025),
 												 lambda: tf.constant(0.00025))))
 	tf.summary.scalar('learning_rate', lr)
 	# Compute gradients.

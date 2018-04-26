@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from tensorflow.python.framework import ops
 
 import os
 
@@ -17,6 +16,7 @@ import logging
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 import configparser
+import augmentation
 
 # parse arguments passed by command line by FLAGS
 FLAGS = tf.app.flags.FLAGS
@@ -73,10 +73,10 @@ def read_hw2(input_queue):
 		# Take the greater value, and use it for the ratio
 		if mode == "max":
 			max_ = tf.maximum(initial_width, initial_height)
-			ratio = tf.to_float(max_) / tf.constant(IMAGE_RESIZE, dtype=tf.float32)
+			ratio = tf.to_float(max_) / tf.constant(IMAGE_RESIZE * 2, dtype=tf.float32)
 		elif mode == "min":
 			min_ = tf.minimum(initial_width, initial_height)
-			ratio = tf.to_float(min_) / tf.constant(IMAGE_RESIZE, dtype=tf.float32)
+			ratio = tf.to_float(min_) / tf.constant(IMAGE_RESIZE * 2, dtype=tf.float32)
 		new_width = tf.to_float(initial_width) / ratio
 		new_height = tf.to_float(initial_height) / ratio
 		return tf.to_int32(new_width), tf.to_int32(new_height)
@@ -126,7 +126,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
 			capacity=min_queue_examples + 3 * batch_size)
 
 	# Display the training images in the visualizer.
-	tf.summary.image('images', images)
+	# tf.summary.image('images', images)
 
 	return images, tf.reshape(label_batch, [batch_size])
 
@@ -159,48 +159,33 @@ def distorted_inputs(data_dir, batch_size):
 			image_paths.append(data_dir + '/' + image_dir + '/' + image)
 			labels.append(int(label))
 
-	# image_paths = tf.convert_to_tensor(image_paths, dtype=tf.string)
-	# labels = tf.convert_to_tensor(tf.cast(labels, tf.int32), dtype=tf.int32)
-	# # Makes an input queue
-	# image_paths_op, labels_op = tf.train.slice_input_producer([image_paths, labels])
-
 	# Makes an input queue
 	image_paths_op, labels_op = tf.train.slice_input_producer([image_paths, labels])
-	# image_paths_queue = wrap_with_queue(image_paths_op)
-	# labels_queue = wrap_with_queue(labels_op, dtypes=tf.int32)
 
 	with tf.name_scope('data_augmentation'):
-		# Read examples from files in the filename queue.
-		# read_input = read_hw2([image_paths_queue, labels_queue])
 		read_input = read_hw2([image_paths_op, labels_op])
 		reshaped_image = tf.cast(read_input.uint8image, tf.float32)
 
-		height = IMAGE_SIZE
-		width = IMAGE_SIZE
+		height = IMAGE_SIZE * 2
+		width = IMAGE_SIZE * 2
 
 		# Image processing for training the network. Note the many random
 		# distortions applied to the image.
 
 		# Randomly crop a [height, width] section of the image.
 		distorted_image = tf.random_crop(reshaped_image, [height, width, 3])
-
-		# Randomly flip the image horizontally.
-		distorted_image = tf.image.random_flip_left_right(distorted_image)
-
-		# Because these operations are not commutative, consider randomizing
-		# the order their operation.
-		# NOTE: since per_image_standardization zeros the mean and makes
-		# the stddev unit, this likely has no effect see tensorflow#1458.
-		distorted_image = tf.image.random_brightness(distorted_image,
-													 max_delta=63)
-		distorted_image = tf.image.random_contrast(distorted_image,
-												   lower=0.2, upper=1.8)
+		tf.summary.image('images_before_augmentation', tf.expand_dims(distorted_image, 0))
+		distorted_image = augmentation.image_augmentation(distorted_image)
+		tf.summary.image('images_after_augmentation', tf.expand_dims(distorted_image, 0))
+		distorted_image = tf.image.resize_images(distorted_image, [int(height / 2), int(width / 2)])
+		tf.summary.image('images_to_feed', tf.expand_dims(distorted_image, 0))
 
 		# Subtract off the mean and divide by the variance of the pixels.
 		float_image = tf.image.per_image_standardization(distorted_image)
+		tf.summary.image('images_after_standardization', tf.expand_dims(float_image,0))
 
 		# Set the shapes of tensors.
-		float_image.set_shape([height, width, 3])
+		float_image.set_shape([height/2, width/2, 3])
 		# read_input.label0.set_shape([1])
 
 		# Ensure that the random shuffling has good mixing properties.
@@ -210,30 +195,6 @@ def distorted_inputs(data_dir, batch_size):
 								 min_fraction_of_examples_in_queue)
 		print('Filling queue with %d hw2 images before starting to train. '
 			  'This will take a few minutes.' % min_queue_examples)
-	# #for debugging
-	# tmp = _generate_image_and_label_batch(float_image, read_input.label0,
-	# 									   min_queue_examples, batch_size,
-	# 							  shuffle=False)
-	# with tf.Session() as sess:
-	# 	sess.run(tf.initialize_all_variables())
-	# 	coord = tf.train.Coordinator()
-	# 	threads = tf.train.start_queue_runners(sess=sess,coord=coord)
-	# 	# for qr in ops.get_collection(ops.GraphKeys.QUEUE_RUNNERS):
-	# 	# 	print(qr)
-	#
-	# 	print(sess.run([image_paths_op, labels_op]))
-	# 	# print(sess.run([image_paths_queue.dequeue()]))
-	# 	print(sess.run([tmp]))
-	# 	coord.join(threads)
-	# 	# print(sess.run([image_batch]))
-	#
-	# 	# for i in range(3):
-	# 	# 	sess.run(labels_queue)
-	# 	# 	print(labels_queue.dequeue().eval())
-	#
-	# 	coord.request_stop()
-	# 	coord.join(threads)
-	# 	sess.close()
 
 	# Generate a batch of images and labels by building up a queue of examples.
 	return _generate_image_and_label_batch(float_image, read_input.label,
@@ -299,6 +260,7 @@ def inputs(is_test_eval, data_dir, batch_size):
 	return _generate_image_and_label_batch(float_image, read_input.label,
 										   min_queue_examples, batch_size,
 										   shuffle=False)
+
 
 if __name__ == '__main__':
 	distorted_inputs("/home/charles/PycharmProjects/hw2_image_classification/data/dset1/train", 5)

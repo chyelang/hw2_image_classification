@@ -125,7 +125,7 @@ def dense_layer(feed, input_dim, output_dim, dropout=False, keep_prob=None, batc
 	else:
 		pre_activation = intermediate + biases
 	if dropout:
-		pre_activation = tf.nn.dropout(pre_activation, keep_prob=keep_prob, name=dropout)
+		pre_activation = tf.nn.dropout(pre_activation, keep_prob=keep_prob, name="dropout")
 	after_activation = tf.nn.relu(pre_activation, name='activated_out')
 	_activation_summary(after_activation)
 

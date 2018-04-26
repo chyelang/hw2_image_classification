@@ -38,6 +38,7 @@ def get_translate_parameters(index, image_dim):
 
 def image_augmentation(image):
 	image_dim = image.get_shape().as_list()[0]
+
 	# randomly scale image
 	scale = random.uniform(0.5, 1)
 	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally

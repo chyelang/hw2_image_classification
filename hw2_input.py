@@ -85,10 +85,10 @@ def read_hw2(input_queue):
 		new_w, new_h = _resize(initial_width, initial_height, "min")
 		resized_image = tf.image.resize_images(image, [new_w, new_h])
 	result.uint8image = tf.cast(resized_image, tf.uint8)
-	image = tf.expand_dims(image, 0)
-	resized_image = tf.expand_dims(resized_image, 0)
-	tf.summary.image('images_before_resize', image)
-	tf.summary.image('images_after_resize', resized_image)
+	# image = tf.expand_dims(image, 0)
+	# resized_image = tf.expand_dims(resized_image, 0)
+	# tf.summary.image('images_before_resize', image)
+	# tf.summary.image('images_after_resize', resized_image)
 	return result
 
 
@@ -110,7 +110,7 @@ def _generate_image_and_label_batch(image, label, min_queue_examples,
 	"""
 	# Create a queue that shuffles the examples, and then
 	# read 'batch_size' images + labels from the example queue.
-	num_preprocess_threads = 4
+	num_preprocess_threads = 16
 	if shuffle:
 		images, label_batch = tf.train.shuffle_batch(
 			[image, label],
@@ -178,11 +178,11 @@ def distorted_inputs(data_dir, batch_size):
 		distorted_image = augmentation.image_augmentation(distorted_image)
 		tf.summary.image('images_after_augmentation', tf.expand_dims(distorted_image, 0))
 		distorted_image = tf.image.resize_images(distorted_image, [int(height / 2), int(width / 2)])
-		tf.summary.image('images_to_feed', tf.expand_dims(distorted_image, 0))
+		# tf.summary.image('images_to_feed', tf.expand_dims(distorted_image, 0))
 
 		# Subtract off the mean and divide by the variance of the pixels.
 		float_image = tf.image.per_image_standardization(distorted_image)
-		tf.summary.image('images_after_standardization', tf.expand_dims(float_image,0))
+		# tf.summary.image('images_after_standardization', tf.expand_dims(float_image,0))
 
 		# Set the shapes of tensors.
 		float_image.set_shape([height/2, width/2, 3])

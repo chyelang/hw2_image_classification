@@ -40,7 +40,7 @@ def image_augmentation(image):
 	image_dim = image.get_shape().as_list()[0]
 
 	# randomly scale image
-	scale = random.uniform(0.6, 1)
+	scale = random.uniform(0.7, 1)
 	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
 	x2 = y2 = 0.5 + 0.5 * scale
 	boxes = np.array([y1, x1, y2, x2], dtype=np.float32)
@@ -50,14 +50,14 @@ def image_augmentation(image):
 	image = tf.expand_dims(image, 0)
 	image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
 
-	# randomly glimpse
-	init_values = np.ones([1, image_dim, image_dim, 3])
-	image_translated = tf.Variable(init_values, trainable=False, dtype=np.float32)
-	seed = random.randint(0, 3)
-	offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim)
-	offset = np.expand_dims(offset,0)
-	glimpse = tf.image.extract_glimpse(image, size, offset)
-	image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
+	# # randomly glimpse
+	# init_values = np.ones([1, image_dim, image_dim, 3])
+	# image_translated = tf.Variable(init_values, trainable=False, dtype=np.float32)
+	# seed = random.randint(0, 3)
+	# offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim)
+	# offset = np.expand_dims(offset,0)
+	# glimpse = tf.image.extract_glimpse(image, size, offset)
+	# image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
 
 	# # Rotation (at 90 degrees)
 	# seed = random.randint(0, 3)

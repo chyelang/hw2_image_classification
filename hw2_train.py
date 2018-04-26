@@ -121,8 +121,8 @@ def train():
 								print('Early stop training!')
 								run_context.request_stop()
 
-		# keep_prob1 = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
-		# keep_prob2 = tf.get_default_graph().get_tensor_by_name('dense2/keep_prob:0')
+		keep_prob1 = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
+		keep_prob2 = tf.get_default_graph().get_tensor_by_name('dense2/keep_prob:0')
 		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
@@ -134,8 +134,7 @@ def train():
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op)
-				# mon_sess.run(train_op, feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
+				mon_sess.run(train_op, feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
 				mon_sess.run(train_acc_op)
 
 def main(argv=None):

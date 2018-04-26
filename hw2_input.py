@@ -175,7 +175,7 @@ def distorted_inputs(data_dir, batch_size):
 		# Randomly crop a [height, width] section of the image.
 		distorted_image = tf.random_crop(reshaped_image, [height, width, 3])
 		tf.summary.image('images_before_augmentation', tf.expand_dims(distorted_image, 0))
-		# distorted_image = augmentation.image_augmentation(distorted_image)
+		distorted_image = augmentation.image_augmentation(distorted_image)
 		tf.summary.image('images_after_augmentation', tf.expand_dims(distorted_image, 0))
 		distorted_image = tf.image.resize_images(distorted_image, [int(height / 2), int(width / 2)])
 		# tf.summary.image('images_to_feed', tf.expand_dims(distorted_image, 0))

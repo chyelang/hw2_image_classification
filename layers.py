@@ -112,7 +112,7 @@ def inception_v1_module(feed, feed_dim=256, map_size=(128,192,96,64), reduce1x1_
 	return after_activation
 
 
-def dense_layer(feed, input_dim, output_dim, dropout=False, keep_prob=None, batch_norm=False, weight_decay=None):
+def dense_layer(feed, input_dim, output_dim, keep_prob=None, batch_norm=False, weight_decay=None):
 	weights = _variable_with_weight_decay('weights', shape=[input_dim, output_dim],
 										  stddev=0.04, wd=weight_decay)
 	biases = _variable_on_cpu('biases', [output_dim], tf.constant_initializer(0.1))
@@ -124,7 +124,7 @@ def dense_layer(feed, input_dim, output_dim, dropout=False, keep_prob=None, batc
 		pre_activation = tf.nn.batch_normalization(intermediate, mean, variance, biases, gamma, epsilon)
 	else:
 		pre_activation = intermediate + biases
-	if dropout:
+	if keep_prob:
 		pre_activation = tf.nn.dropout(pre_activation, keep_prob=keep_prob, name=dropout)
 	after_activation = tf.nn.relu(pre_activation, name='activated_out')
 	_activation_summary(after_activation)

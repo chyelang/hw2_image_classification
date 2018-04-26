@@ -166,13 +166,13 @@ def inference(images):
 		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 2048, keep_prob=keep_prob, batch_norm=False, weight_decay=5e-3)
+		dense1 = layers.dense_layer(reshape, dim, 2048, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-4)
 		tf.summary.scalar("keep_prob",keep_prob)
 
 	# dense2
 	with tf.variable_scope('dense2') as scope:
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense2 = layers.dense_layer(dense1, 2048, 1024, keep_prob=keep_prob, batch_norm=False, weight_decay=5e-3)
+		dense2 = layers.dense_layer(dense1, 2048, 1024, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-4)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
@@ -274,12 +274,12 @@ def train(total_loss, global_step):
 	loss_averages_op = _add_loss_summaries(total_loss)
 	global_step = tf.train.get_or_create_global_step()
 	lr = tf.cond(tf.less(global_step, 10000),
-				 lambda: tf.constant(0.001),
+				 lambda: tf.constant(0.005),
 				 lambda: tf.cond(tf.less(global_step, 20000),
-								 lambda: tf.constant(0.0005),
+								 lambda: tf.constant(0.001),
 								 lambda: tf.cond(tf.less(global_step, 30000),
-												 lambda: tf.constant(0.00025),
-												 lambda: tf.constant(0.00001))))
+												 lambda: tf.constant(0.0005),
+												 lambda: tf.constant(0.00025))))
 	tf.summary.scalar('learning_rate', lr)
 	# Compute gradients.
 	with tf.control_dependencies([loss_averages_op]):

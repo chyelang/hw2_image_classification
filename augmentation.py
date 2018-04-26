@@ -40,7 +40,7 @@ def image_augmentation(image):
 	image_dim = image.get_shape().as_list()[0]
 
 	# randomly scale image
-	scale = random.uniform(0.5, 1)
+	scale = random.uniform(0.6, 1)
 	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
 	x2 = y2 = 0.5 + 0.5 * scale
 	boxes = np.array([y1, x1, y2, x2], dtype=np.float32)
@@ -57,7 +57,6 @@ def image_augmentation(image):
 	offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim)
 	offset = np.expand_dims(offset,0)
 	glimpse = tf.image.extract_glimpse(image, size, offset)
-
 	image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
 
 	# # Rotation (at 90 degrees)
@@ -88,7 +87,7 @@ def image_augmentation(image):
 	image = tf.image.random_flip_up_down(image)
 
 	# brightness and contrast
-	image = tf.image.random_brightness(image, max_delta=63)
-	image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
+	# image = tf.image.random_brightness(image, max_delta=63)
+	# image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
 
 	return image

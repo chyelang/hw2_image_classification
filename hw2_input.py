@@ -66,8 +66,7 @@ def read_hw2(input_queue):
 	initial_width = tf.shape(image)[0]
 	initial_height = tf.shape(image)[1]
 
-	# NWHC
-
+	# NHWC
 	# Function for resizing
 	def _resize(x, y, mode):
 		# Take the greater value, and use it for the ratio
@@ -82,13 +81,16 @@ def read_hw2(input_queue):
 		return tf.to_int32(new_width), tf.to_int32(new_height)
 
 	with tf.control_dependencies([image]):
-		new_w, new_h = _resize(initial_width, initial_height, "min")
+		# resize and keeping the initial ratio height/width
+		# new_w, new_h = _resize(initial_width, initial_height, "min")
+		# resize to a square
+		new_w, new_h = IMAGE_RESIZE * 2, IMAGE_RESIZE * 2
 		resized_image = tf.image.resize_images(image, [new_w, new_h])
 	result.uint8image = tf.cast(resized_image, tf.uint8)
-	# image = tf.expand_dims(image, 0)
-	# resized_image = tf.expand_dims(resized_image, 0)
-	# tf.summary.image('images_before_resize', image)
-	# tf.summary.image('images_after_resize', resized_image)
+	image = tf.expand_dims(image, 0)
+	resized_image = tf.expand_dims(resized_image, 0)
+	tf.summary.image('images_before_resize', image)
+	tf.summary.image('images_after_resize', resized_image)
 	return result
 
 
@@ -178,7 +180,7 @@ def distorted_inputs(data_dir, batch_size):
 		distorted_image = augmentation.image_augmentation(distorted_image)
 		tf.summary.image('images_after_augmentation', tf.expand_dims(distorted_image, 0))
 		distorted_image = tf.image.resize_images(distorted_image, [int(height / 2), int(width / 2)])
-		# tf.summary.image('images_to_feed', tf.expand_dims(distorted_image, 0))
+		tf.summary.image('images_to_feed', tf.expand_dims(distorted_image, 0))
 
 		# Subtract off the mean and divide by the variance of the pixels.
 		float_image = tf.image.per_image_standardization(distorted_image)

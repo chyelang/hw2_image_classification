@@ -40,7 +40,7 @@ def image_augmentation(image):
 	image_dim = image.get_shape().as_list()[0]
 
 	# randomly scale image
-	scale = random.uniform(0.7, 1)
+	scale = random.uniform(0.8, 1)
 	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
 	x2 = y2 = 0.5 + 0.5 * scale
 	boxes = np.array([y1, x1, y2, x2], dtype=np.float32)
@@ -50,21 +50,18 @@ def image_augmentation(image):
 	image = tf.expand_dims(image, 0)
 	image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
 
-	# randomly glimpse
-	init_values = np.ones([1, image_dim, image_dim, 3])
-	image_translated = tf.Variable(init_values, trainable=False, dtype=np.float32)
-	seed = random.randint(0, 3)
-	offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim)
-	offset = np.expand_dims(offset,0)
-	glimpse = tf.image.extract_glimpse(image, size, offset)
-	image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
-
-	# # Rotation (at 90 degrees)
+	# # randomly glimpse
+	# init_values = np.ones([1, image_dim, image_dim, 3])
+	# image_translated = tf.Variable(init_values, trainable=False, dtype=np.float32)
 	# seed = random.randint(0, 3)
-	# image = tf.image.rot90(image, k=seed)
+	# offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim)
+	# offset = np.expand_dims(offset,0)
+	# glimpse = tf.image.extract_glimpse(image, size, offset)
+	# image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
 
 	# Rotation (at finer angles)
-	degrees_angle = random.randint(0, 360)
+	# degrees_angle = random.randint(0, 360)
+	degrees_angle = random.randint(-5, 5)
 	radian_value = degrees_angle * 3.14159 / 180  # Convert to radian
 	image = tf.contrib.image.rotate(image, radian_value)
 
@@ -81,6 +78,10 @@ def image_augmentation(image):
 	# # Add Pepper noise
 	# coords = [np.random.randint(0, i - 1, int(num_pepper)) for i in image.get_shape().as_list()]
 	# image = image[coords[0], coords[1], :].assign(0)
+
+	# # Rotation (at 90 degrees)
+	seed = random.randint(0, 3)
+	image = tf.image.rot90(image, k=seed)
 
 	# Randomly flip the image horizontally and vertically.
 	image = tf.image.random_flip_left_right(image)

@@ -61,7 +61,7 @@ def image_augmentation(image):
 
 	# Rotation (at finer angles)
 	# degrees_angle = random.randint(0, 360)
-	degrees_angle = random.randint(-5, 5)
+	degrees_angle = random.randint(0, 360)
 	radian_value = degrees_angle * 3.14159 / 180  # Convert to radian
 	image = tf.contrib.image.rotate(image, radian_value)
 
@@ -80,8 +80,8 @@ def image_augmentation(image):
 	# image = image[coords[0], coords[1], :].assign(0)
 
 	# # Rotation (at 90 degrees)
-	seed = random.randint(0, 3)
-	image = tf.image.rot90(image, k=seed)
+	# seed = random.randint(0, 3)
+	# image = tf.image.rot90(image, k=seed)
 
 	# Randomly flip the image horizontally and vertically.
 	image = tf.image.random_flip_left_right(image)

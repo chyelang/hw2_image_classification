@@ -1,0 +1,37 @@
+============================
+0428
+*****
+commit 1cfe9438c18bdbc003e00ee5eaf62ac9bdf04900
+Author: charles <zouxm12@outlook.com>
+Date:   Thu Apr 26 23:58:56 2018 +0800
+
+    resize original image to squre, enable glimplse augmentation
+step 18870, loss = 3.32, acc = 0.25 (97.5 examples/sec; 1.313 sec/batch)
+
+val_acc = 0.15 
+
+*****
+commit 59ce3d320419b1814bf3ea4e558bacc5fbb86820
+Author: charles <zouxm12@outlook.com>
+Date:   Fri Apr 27 00:31:37 2018 +0800
+
+    fix minor bug
+    replace rotate any angle with rotate ?*90
+step 2470, loss = 4.20, acc = 0.02 (9.8 examples/sec; 13.071 sec/batch)
+
+## 可见以上两个网络在train上的表现也很差。可能是因为data augmentation后数据量很大，但是全连接层中又还有dropout的原因。
+
+******
+commit 6834081c52c7b9f92e298cb89ce8092521b251cd
+Author: charles <zouxm12@outlook.com>
+Date:   Fri Apr 27 09:57:22 2018 +0800
+
+    change mode of rotation: resize by keeping original ratio, light rotation, rotate by 90
+
+val_acc = 0.23
+step 4670, loss = 2.24, acc = 0.66 (97.5 examples/sec; 1.313 sec/batch)
+
+## 数据增广不那么多之后，这个模型在train上的表现变好了，但是过拟合比较严重。
+## 下一步：去掉dropout，在dense层也加入BN，做heavy data augmentation减小过拟合
+
+

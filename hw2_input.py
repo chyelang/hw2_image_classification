@@ -28,10 +28,12 @@ config.read(config_path)
 NUM_CLASSES = config.getint(section, 'NUM_CLASSES')
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = config.getint(section, 'NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN')
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = config.getint(section, 'NUM_EXAMPLES_PER_EPOCH_FOR_EVAL')
+
+IMAGE_SIZE_before_random_crop = config.getint(section, 'IMAGE_SIZE_before_random_crop')
 # Resize the original images to this size. (the small edge)
-IMAGE_RESIZE = config.getint(section, 'IMAGE_RESIZE')
+IMAGE_SIZE_before_augmentation = config.getint(section, 'IMAGE_SIZE_before_augmentation')
 # Process images of this size.
-IMAGE_SIZE = config.getint(section, 'IMAGE_SIZE')
+IMAGE_SIZE_to_feed = config.getint(section, 'IMAGE_SIZE_to_feed')
 
 
 def read_hw2(input_queue):
@@ -72,10 +74,10 @@ def read_hw2(input_queue):
 		# Take the greater value, and use it for the ratio
 		if mode == "max":
 			max_ = tf.maximum(initial_width, initial_height)
-			ratio = tf.to_float(max_) / tf.constant(IMAGE_RESIZE * 2, dtype=tf.float32)
+			ratio = tf.to_float(max_) / tf.constant(IMAGE_SIZE_before_random_crop, dtype=tf.float32)
 		elif mode == "min":
 			min_ = tf.minimum(initial_width, initial_height)
-			ratio = tf.to_float(min_) / tf.constant(IMAGE_RESIZE * 2, dtype=tf.float32)
+			ratio = tf.to_float(min_) / tf.constant(IMAGE_SIZE_before_random_crop, dtype=tf.float32)
 		new_width = tf.to_float(initial_width) / ratio
 		new_height = tf.to_float(initial_height) / ratio
 		return tf.to_int32(new_width), tf.to_int32(new_height)
@@ -168,26 +170,26 @@ def distorted_inputs(data_dir, batch_size):
 		read_input = read_hw2([image_paths_op, labels_op])
 		reshaped_image = tf.cast(read_input.uint8image, tf.float32)
 
-		height = IMAGE_SIZE * 2
-		width = IMAGE_SIZE * 2
+		height = IMAGE_SIZE_to_feed
+		width = IMAGE_SIZE_to_feed
 
 		# Image processing for training the network. Note the many random
 		# distortions applied to the image.
 
 		# Randomly crop a [height, width] section of the image.
-		distorted_image = tf.random_crop(reshaped_image, [height, width, 3])
+		distorted_image = tf.random_crop(reshaped_image, [IMAGE_SIZE_before_augmentation, IMAGE_SIZE_before_augmentation, 3])
 		tf.summary.image('images_before_augmentation', tf.expand_dims(distorted_image, 0))
 		distorted_image = augmentation.image_augmentation(distorted_image)
 		tf.summary.image('images_after_augmentation', tf.expand_dims(distorted_image, 0))
-		distorted_image = tf.image.resize_images(distorted_image, [int(height / 2), int(width / 2)])
-		tf.summary.image('images_to_feed', tf.expand_dims(distorted_image, 0))
+		distorted_image = tf.image.resize_images(distorted_image, [height, width])
+		tf.summary.image('images_before_standardization', tf.expand_dims(distorted_image, 0))
 
 		# Subtract off the mean and divide by the variance of the pixels.
 		float_image = tf.image.per_image_standardization(distorted_image)
-		# tf.summary.image('images_after_standardization', tf.expand_dims(float_image,0))
+		tf.summary.image('images_after_standardization', tf.expand_dims(float_image,0))
 
 		# Set the shapes of tensors.
-		float_image.set_shape([height/2, width/2, 3])
+		float_image.set_shape([height, width, 3])
 		# read_input.label0.set_shape([1])
 
 		# Ensure that the random shuffling has good mixing properties.
@@ -238,16 +240,21 @@ def inputs(is_test_eval, data_dir, batch_size):
 		read_input = read_hw2([image_paths_op, labels_op])
 		reshaped_image = tf.cast(read_input.uint8image, tf.float32)
 
-		height = IMAGE_SIZE
-		width = IMAGE_SIZE
+		height = IMAGE_SIZE_to_feed
+		width = IMAGE_SIZE_to_feed
 
 		# Image processing for evaluation.
 		# Crop the central [height, width] of the image.
 		resized_image = tf.image.resize_image_with_crop_or_pad(reshaped_image,
-															   height, width)
+															   IMAGE_SIZE_before_random_crop,
+															   IMAGE_SIZE_before_random_crop)
+		tf.summary.image('eval_images_after_central_crop', tf.expand_dims(resized_image, 0))
+		resized_image = tf.image.resize_images(resized_image, [height, width])
+		tf.summary.image('eval_images_before_standardization', tf.expand_dims(resized_image, 0))
 
 		# Subtract off the mean and divide by the variance of the pixels.
 		float_image = tf.image.per_image_standardization(resized_image)
+		tf.summary.image('eval_images_after_standardization', tf.expand_dims(resized_image, 0))
 
 		# Set the shapes of tensors.
 		float_image.set_shape([height, width, 3])

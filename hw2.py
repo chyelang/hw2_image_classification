@@ -34,7 +34,7 @@ tf.app.flags.DEFINE_boolean('use_fp16', bool(config.getint(section, 'use_fp16'))
 							"""Train the model using fp16.""")
 
 # Global constants describing the hw2 data set.
-IMAGE_SIZE = hw2_input.IMAGE_SIZE
+# IMAGE_SIZE = hw2_input.IMAGE_SIZE
 NUM_CLASSES = hw2_input.NUM_CLASSES
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = hw2_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = hw2_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL

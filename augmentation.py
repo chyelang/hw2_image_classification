@@ -88,7 +88,7 @@ def image_augmentation(image):
 	image = tf.image.random_flip_up_down(image)
 
 	# brightness and contrast
-	# image = tf.image.random_brightness(image, max_delta=63)
-	# image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
+	image = tf.image.random_brightness(image, max_delta=63)
+	image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
 
 	return image

@@ -34,4 +34,12 @@ step 4670, loss = 2.24, acc = 0.66 (97.5 examples/sec; 1.313 sec/batch)
 ## 数据增广不那么多之后，这个模型在train上的表现变好了，但是过拟合比较严重。
 ## 下一步：去掉dropout，在dense层也加入BN，做heavy data augmentation减小过拟合
 
+*****
+commit 2e90cecef7810963080ba0d795a42772354e74f3
+Author: charles <zouxm12@outlook.com>
+Date:   Fri Apr 27 17:58:50 2018 +0800
 
+    fix image size bug in evaluation
+
+val acc = 0.16
+step 4870, loss = 0.87, acc = 0.92 (97.0 examples/sec; 1.320 sec/batch)

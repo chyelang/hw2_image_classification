@@ -17,8 +17,8 @@ import numpy as np
 import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('section', "lenovo",
-						   """where to run this code""")
+# tf.app.flags.DEFINE_string('section', "lenovo",
+# 						   """where to run this code""")
 import hw2
 
 section = FLAGS.section

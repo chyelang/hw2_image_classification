@@ -7,6 +7,7 @@ checkpoints
 /data
 train_records
 inference_hist
+*.txt
 
 # Created by .ignore support plugin (hsz.mobi)
 /.idea

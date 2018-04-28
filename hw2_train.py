@@ -72,12 +72,12 @@ def train():
 			"""Logs loss and runtime."""
 
 			def begin(self):
-				self._step = -1
+				self._step = 0
 				self._start_time = time.time()
 
 			def before_run(self, run_context):
 				self._step += 1
-				return tf.train.SessionRunArgs([loss, train_acc, global_step])  # Asks for loss value.
+				return tf.train.SessionRunArgs([loss, train_acc_op, global_step])  # Asks for loss value.
 
 			def after_run(self, run_context, run_values):
 				if self._step % FLAGS.log_frequency == 0:
@@ -93,9 +93,9 @@ def train():
 								  'sec/batch)')
 					print(format_str % (datetime.now(), self._step, loss_value, train_acc_val,
 										examples_per_sec, sec_per_batch))
-					print("globle step = %d" %(run_values.results[2]))
-					if run_values.results[2] % 100 == 0:
-						saver.save(run_context.session, FLAGS.log_path+"/model.ckpt", run_values.results[2])
+				print("globle step = %d" %(run_values.results[2]))
+				# if run_values.results[2] % 4 == 0:
+				# 	saver.save(run_context.session, FLAGS.log_path+"/model.ckpt", run_values.results[2])
 
 
 		class _EarlyStoppingHook(tf.train.SessionRunHook):
@@ -136,12 +136,13 @@ def train():
 					   tf.train.NanTensorHook(loss),
 					   _LoggerHook(),
 					    early_stop_hook],
-				save_checkpoint_secs=0,
+				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op, feed_dict={keep_prob1: 0.5, keep_prob2: 0.5})
-				mon_sess.run(train_acc_op)
+				mon_sess.run(train_op, feed_dict={keep_prob1: 0.7, keep_prob2: 0.5})
+				# 每一次run都会调用一次所有的hook
+				# 每输入一个batch的数据，则global step加1
 
 def main(argv=None):
 	# # why to delete? 因为此处的train_dir只是存放log和checkpoint的，并不是训练数据

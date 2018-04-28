@@ -66,6 +66,8 @@ def train():
 													   tf.cast(FLAGS.batch_size, tf.float32)))
 			tf.summary.scalar("train_acc", train_acc_op)
 
+		saver = tf.train.Saver()
+
 		class _LoggerHook(tf.train.SessionRunHook):
 			"""Logs loss and runtime."""
 
@@ -75,7 +77,7 @@ def train():
 
 			def before_run(self, run_context):
 				self._step += 1
-				return tf.train.SessionRunArgs([loss, train_acc])  # Asks for loss value.
+				return tf.train.SessionRunArgs([loss, train_acc, global_step])  # Asks for loss value.
 
 			def after_run(self, run_context, run_values):
 				if self._step % FLAGS.log_frequency == 0:
@@ -91,6 +93,10 @@ def train():
 								  'sec/batch)')
 					print(format_str % (datetime.now(), self._step, loss_value, train_acc_val,
 										examples_per_sec, sec_per_batch))
+					print("globle step = %d" %(run_values.results[2]))
+					if run_values.results[2] % 100 == 0:
+						saver.save(run_context.session, FLAGS.log_path+"/model.ckpt", run_values.results[2])
+
 
 		class _EarlyStoppingHook(tf.train.SessionRunHook):
 			"""Hook that requests stop at a specified step."""
@@ -130,7 +136,7 @@ def train():
 					   tf.train.NanTensorHook(loss),
 					   _LoggerHook(),
 					    early_stop_hook],
-				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
+				save_checkpoint_secs=0,
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():

@@ -77,7 +77,7 @@ def train():
 
 			def before_run(self, run_context):
 				self._step += 1
-				return tf.train.SessionRunArgs([loss, train_acc_op, global_step])  # Asks for loss value.
+				return tf.train.SessionRunArgs([loss, train_acc_op])  # Asks for loss value.
 
 			def after_run(self, run_context, run_values):
 				if self._step % FLAGS.log_frequency == 0:
@@ -89,11 +89,11 @@ def train():
 					train_acc_val = run_values.results[1]
 					examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
 					sec_per_batch = float(duration / FLAGS.log_frequency)
-					format_str = ('%s: step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
+					format_str = ('%s: global step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
 								  'sec/batch)')
 					print(format_str % (datetime.now(), self._step, loss_value, train_acc_val,
 										examples_per_sec, sec_per_batch))
-				print("globle step = %d" %(run_values.results[2]))
+				# print("globle step = %d" %(run_values.results[2]))
 				# if run_values.results[2] % 4 == 0:
 				# 	saver.save(run_context.session, FLAGS.log_path+"/model.ckpt", run_values.results[2])
 
@@ -140,7 +140,7 @@ def train():
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op, feed_dict={keep_prob1: 0.7, keep_prob2: 0.5})
+				mon_sess.run(train_op, feed_dict={keep_prob1: 0.6, keep_prob2: 0.5})
 				# 每一次run都会调用一次所有的hook
 				# 每输入一个batch的数据，则global step加1
 

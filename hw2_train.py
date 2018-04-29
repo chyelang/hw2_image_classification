@@ -65,6 +65,11 @@ def train():
 			train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
 													   tf.cast(FLAGS.batch_size, tf.float32)))
 			tf.summary.scalar("train_acc", train_acc_op)
+			val_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="val_acc")
+			tmp = hw2_eval.evaluate()
+			# TODO: create a subgraphe to do the eval
+			val_acc_op = tf.assign(val_acc, tmp)
+			tf.summary.scalar("val_acc", val_acc_op)
 
 		saver = tf.train.Saver()
 
@@ -115,7 +120,7 @@ def train():
 					cur_ckpt_step = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
 					if cur_ckpt_step > self._ckpt_step:
 						self._ckpt_step = cur_ckpt_step
-						self.current = hw2_eval.evaluate()
+						self.current = run_context.session.run(val_acc_op)
 						format_str = '%s: step %d, val_acc = %.2f'
 						print(format_str % (datetime.now(), self._ckpt_step, self.current))
 						if (self.current - self.min_delta) > self.best:

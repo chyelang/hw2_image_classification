@@ -12,6 +12,7 @@ import tensorflow as tf
 from tensorflow.python.training import queue_runner
 import re
 import logging
+import random
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -177,7 +178,11 @@ def distorted_inputs(data_dir, batch_size):
 		# distortions applied to the image.
 
 		# Randomly crop a [height, width] section of the image.
-		distorted_image = tf.random_crop(reshaped_image, [IMAGE_SIZE_before_augmentation, IMAGE_SIZE_before_augmentation, 3])
+		image_size_to_crop = random.randint(IMAGE_SIZE_before_augmentation, IMAGE_SIZE_before_random_crop)
+		tf.summary.scalar("image_size_to_crop", image_size_to_crop)
+		distorted_image = tf.random_crop(reshaped_image, [image_size_to_crop, image_size_to_crop, 3])
+
+		distorted_image = tf.image.resize_images(distorted_image, [IMAGE_SIZE_before_augmentation, IMAGE_SIZE_before_augmentation])
 		tf.summary.image('images_before_augmentation', tf.expand_dims(distorted_image, 0))
 		distorted_image = augmentation.image_augmentation(distorted_image)
 		tf.summary.image('images_after_augmentation', tf.expand_dims(distorted_image, 0))

@@ -48,6 +48,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, acc):
 	  top_k_op: Top K op.
 	  summary_op: Summary op.
 	"""
+	precision = 0
 	with tf.Session() as sess:
 		ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
 		if ckpt and ckpt.model_checkpoint_path:
@@ -59,7 +60,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, acc):
 			global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
 		else:
 			print('No checkpoint file found')
-			return
+			return precision
 
 		# Start the queue runners.
 		coord = tf.train.Coordinator()
@@ -98,6 +99,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, acc):
 
 def evaluate():
 	"""Eval hw2 for a number of steps."""
+	precision = 0
 	with tf.Graph().as_default() as g:
 		# Get images and labels for hw2.
 		is_test_eval = FLAGS.eval_data == 'test'

@@ -166,13 +166,13 @@ def inference(images):
 		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 2048,  dropout = False, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
+		dense1 = layers.dense_layer(reshape, dim, 2048,  dropout = False, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-4)
 		tf.summary.scalar("keep_prob",keep_prob)
 
 	# dense2
 	with tf.variable_scope('dense2') as scope:
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense2 = layers.dense_layer(dense1, 2048, 1024, dropout = False, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
+		dense2 = layers.dense_layer(dense1, 2048, 1024, dropout = False, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-4)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),

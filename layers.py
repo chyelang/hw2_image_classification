@@ -1,5 +1,6 @@
 import tensorflow as tf
 import math
+import numpy as np
 
 from tensorflow.python.ops.gen_nn_ops import conv2d
 from utils import _variable_on_cpu
@@ -131,7 +132,18 @@ def dense_layer(feed, input_dim, output_dim, dropout=False, keep_prob=None, batc
 
 	return after_activation
 
-def conv2d_sub(input, filter, strides, padding = 'SAME'):
+def img2col(img, ksizes, strides,):
+	"""
+	ksizes = [1, ksize_rows, ksize_cols, 1] strides = [1, strides_rows, strides_cols, 1]
+	:param img:
+	:param ksizes:
+	:param strides:
+	:return:
+	"""
+	pass
+
+
+def conv2d_func(input, filter, strides, padding = 'SAME'):
 	# NHWC
 	"""
 
@@ -149,24 +161,70 @@ def conv2d_sub(input, filter, strides, padding = 'SAME'):
 	in_dims = input.get_shape().as_list()
 	filter_dims = filter.get_shape().as_list()
 	out_dims = [in_dims[0], 0, 0, filter_dims[-1]]
-	if padding == "SAME":
-		out_dims[1] = math.ceil(float(in_dims[1])/float(strides[1]))
-		out_dims[2] = math.ceil(float(in_dims[2]) / float(strides[2]))
-		delta_H = strides[1]*(out_dims[1]-1) + filter_dims[1] - in_dims[1]
-		delta_W = strides[2] * (out_dims[2] - 1) + filter_dims[2] - in_dims[2]
-		paddings = tf.constant([[0, 0], [math.floor(delta_H/2.0), math.ceil(delta_H/2.0)],
-								[math.floor(delta_W/2.0), math.ceil(delta_W/2.0)], [0, 0]])
-		input = tf.pad(input, paddings, "CONSTANT")
+	# if padding == "SAME":
+	# 	out_dims[1] = math.ceil(float(in_dims[1]) / float(strides[1]))
+	# 	out_dims[2] = math.ceil(float(in_dims[2]) / float(strides[2]))
+	# 	delta_H = strides[1] * (out_dims[1]-1) + filter_dims[1] - in_dims[1]
+	# 	delta_W = strides[2] * (out_dims[2] - 1) + filter_dims[2] - in_dims[2]
+	# 	paddings = tf.constant([[0, 0], [math.floor(delta_H/2.0), math.ceil(delta_H/2.0)],
+	# 							[math.floor(delta_W/2.0), math.ceil(delta_W/2.0)], [0, 0]])
+	# 	input = tf.pad(input, paddings, "CONSTANT")
+	#
+	# elif padding == "VALID":
+	# 	out_dims[1] = math.ceil(float(in_dims[1] - filter_dims[1] + 1)
+	# 							/ float(strides[1]))
+	# 	out_dims[2] = math.ceil(float(in_dims[2] - filter_dims[2] + 1)
+	# 							/ float(strides[2]))
+	# else:
+	# 	return
+	# init_values = tf.zeros(out_dims)
+	# output = tf.Variable(init_values, trainable=False, dtype=tf.float32)
+	filter_mat = tf.reshape(filter, [-1, filter_dims[-1]])
+	image_mat = tf.extract_image_patches(images=input, ksizes=[1, filter_dims[0], filter_dims[1], 1], strides=strides,
+										 rates=[1, 1, 1, 1], padding=padding)
+	image_patches_dim = image_mat.get_shape().as_list()
+	image_mat = tf.reshape(image_mat, [-1, image_patches_dim[-1]])
+	conv_mat = tf.matmul(filter_mat, image_mat, transpose_a=True, transpose_b=True)
+	conv = tf.reshape(tf.transpose(conv_mat), [image_patches_dim[0], image_patches_dim[1], image_patches_dim[2], filter_dims[-1]])
 
-	elif padding == "VALID":
-		out_dims[1] = math.ceil(float(in_dims[1] - filter_dims[1] + 1)
-								/ float(strides[1]))
-		out_dims[2] = math.ceil(float(in_dims[2] - filter_dims[2] + 1)
-								/ float(strides[2]))
+	# tf.reduce_sum(tf.multiply(image_mat, tf.reshape(sobel_x_filter, [9])), 3, keep_dims=True)
 
-	else:
-		return
+	return conv
+
+def conv2d_test():
+	image1 = np.arange(10 * 10 * 1).reshape(1, 10, 10, 1)
+	image1 = tf.convert_to_tensor(image1.astype(np.float32))
+	#sobel_x filter
+	filter1 = tf.constant([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], tf.float32)
+	filter1 = tf.reshape(filter1, [3, 3, 1, 1])
+
+	actual1 = conv2d_func(image1, filter1, [1, 1, 1, 1], padding='SAME')
+	expected1 = tf.nn.conv2d(image1, filter1, strides=[1, 1, 1, 1], padding='SAME')
+	actual1_ = conv2d_func(image1, filter1, [1, 1, 1, 1], padding='VALID')
+	expected1_ = tf.nn.conv2d(image1, filter1, strides=[1, 1, 1, 1], padding='VALID')
+
+	with tf.Session() as sess:
+		print(sess.run(actual1_))
+		print(sess.run(expected1_))
+		print(sess.run(tf.reduce_sum(expected1 - actual1)))
+		print(sess.run(tf.reduce_sum(expected1_ - actual1_)))
+
+	# another test
+	image2 = tf.random_uniform([1,4,4,1], minval= 0, maxval=10, dtype=tf.float32)
+	filter2 = tf.random_uniform([3,3,1,1], minval= -3, maxval=3, dtype=tf.float32)
+
+	actual2 = conv2d_func(image2, filter2, [1, 1, 1, 1], padding='SAME')
+	expected2 = tf.nn.conv2d(image2, filter2, strides=[1, 1, 1, 1], padding='SAME')
+	actual2_ = conv2d_func(image2, filter2, [1, 1, 1, 1], padding='VALID')
+	expected2_ = tf.nn.conv2d(image2, filter2, strides=[1, 1, 1, 1], padding='VALID')
+
+	with tf.Session() as sess:
+		print(sess.run(actual2_))
+		print(sess.run(expected2_))
+		print(sess.run(tf.reduce_sum(expected2 - actual2)))
+		print(sess.run(tf.reduce_sum(expected2_ - actual2_)))
+
 
 
 if __name__ == '__main__':
-	print("hello")
+	conv2d_test()

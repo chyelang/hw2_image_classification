@@ -178,7 +178,7 @@ def distorted_inputs(data_dir, batch_size):
 		# distortions applied to the image.
 
 		# Randomly crop a [height, width] section of the image.
-		image_size_to_crop = random.randint(IMAGE_SIZE_before_augmentation, IMAGE_SIZE_before_random_crop)
+		image_size_to_crop = tf.random_uniform((), IMAGE_SIZE_before_augmentation, IMAGE_SIZE_before_random_crop, dtype=tf.int32)
 		tf.summary.scalar("image_size_to_crop", image_size_to_crop)
 		distorted_image = tf.random_crop(reshaped_image, [image_size_to_crop, image_size_to_crop, 3])
 

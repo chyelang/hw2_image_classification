@@ -142,6 +142,7 @@ def train():
 					   _LoggerHook(),
 					    early_stop_hook],
 				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
+				log_step_count_steps=50,
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():

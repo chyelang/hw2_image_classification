@@ -119,12 +119,12 @@ def inference(images):
 		conv_stack1 = layers.conv2d_stack(images, kernel_list, stride_list, padding_list, batch_norm = True)
 
 	# pool1
-	pool1 = tf.nn.max_pool(conv_stack1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
+	pool1 = tf.nn.max_pool(conv_stack1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool1')
 
 	with tf.variable_scope('conv_stack2') as scope:
-		kernel_list = [[3,3,64,128],[3,3,128,128]]
-		stride_list = [[1,2,2,1],[1,1,1,1]]
+		kernel_list = [[3,3,64,128],[3,3,128,192]]
+		stride_list = [[1,1,1,1],[1,1,1,1]]
 		padding_list = ['SAME','SAME']
 		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = True)
 
@@ -132,51 +132,55 @@ def inference(images):
 	pool2 = tf.nn.max_pool(conv_stack2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool2')
 
-	with tf.variable_scope('conv_stack3') as scope:
-		kernel_list = [[3,3,128,256],[3,3,256,256]]
-		stride_list = [[1,1,1,1],[1,1,1,1]]
-		padding_list = ['SAME','SAME']
-		conv_stack3 = layers.conv2d_stack(pool2, kernel_list, stride_list, padding_list, batch_norm = True)
+	# inception3a
+	with tf.variable_scope('inception3a') as scope:
+		inception3a = layers.inception_v2_module(pool2, 192, map_size=(64, 64, 96, 32), reduce1x1_size=64, batch_norm=True)
+
+	# inception3b
+	with tf.variable_scope('inception3b') as scope:
+		inception3b = layers.inception_v2_module(inception3a, 256, map_size=(64, 96, 96, 64), reduce1x1_size=64, batch_norm=True)
+
+	# inception3c
+	with tf.variable_scope('inception3c') as scope:
+		inception3c = layers.inception_v2_module(inception3b, 320, map_size=(96, 160, 128, 96), reduce1x1_size=64, batch_norm=True)
 
 	# pool3
-	pool3 = tf.nn.max_pool(conv_stack3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+	pool3 = tf.nn.max_pool(inception3c, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool3')
 
-	# inception1
-	with tf.variable_scope('inception1') as scope:
-		inception1 = layers.inception_v1_module(pool3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
+	# inception4a
+	with tf.variable_scope('inception4a') as scope:
+		inception4a = layers.inception_v2_module(pool3, 480, map_size=(128, 192, 128, 128), reduce1x1_size=96, batch_norm=True)
+
+	# inception4b
+	with tf.variable_scope('inception4b') as scope:
+		inception4b = layers.inception_v2_module(inception4a, 576, map_size=(64, 256, 192, 128), reduce1x1_size=96, batch_norm=True)
+
+	# inception4c
+	with tf.variable_scope('inception4c') as scope:
+		inception4c = layers.inception_v2_module(inception4b, 640, map_size=(32, 352, 256, 128), reduce1x1_size=128, batch_norm=True)
 
 	# pool4
-	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
+	pool4 = tf.nn.max_pool(inception4c, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool4')
 
-	# inception2
-	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v1_module(pool4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
+	# inception5a
+	with tf.variable_scope('inception5a') as scope:
+		inception5a = layers.inception_v2_module(pool4, 768, map_size=(32, 512, 352, 128), reduce1x1_size=192, batch_norm=True)
 
 	# pool5
-	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool5')
+	pool5 = tf.nn.avg_pool(inception5a, ksize=[1, 7, 7, 1], strides=[1, 1, 1, 1],
+						   padding='VALID', name='pool5')
 
 	# dense1
 	with tf.variable_scope('dense1') as scope:
-		# Move everything into depth so we can perform a single matrix multiply.
-		# images is a batch of input images, so images.get_shape().as_list()[0] is the
-		# number of pictures, this op is equivalent to flattent
 		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 2048,  dropout = False, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-4)
-		tf.summary.scalar("keep_prob",keep_prob)
-
-	# dense2
-	with tf.variable_scope('dense2') as scope:
-		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense2 = layers.dense_layer(dense1, 2048, 1024, dropout = False, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-4)
+		dense1 = layers.dense_layer(reshape, dim, 1024,  dropout = True, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-5)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
-	# We don't apply softmax here because
 	# tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
 	# and performs the softmax internally for efficiency.
 	with tf.variable_scope('softmax_linear') as scope:
@@ -184,7 +188,7 @@ def inference(images):
 											  stddev=1 / 1024.0, wd=None)
 		biases = _variable_on_cpu('biases', [NUM_CLASSES],
 								  tf.constant_initializer(0.0))
-		softmax_linear = tf.add(tf.matmul(dense2, weights), biases, name=scope.name)
+		softmax_linear = tf.add(tf.matmul(dense1, weights), biases, name=scope.name)
 		_activation_summary(softmax_linear)
 
 	return softmax_linear

@@ -169,7 +169,7 @@ def inference(images):
 		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 1024,  dropout = True, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-5)
+		dense1 = layers.dense_layer(reshape, dim, 1024,  dropout = False, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-5)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
@@ -271,9 +271,9 @@ def train(total_loss, global_step):
 	loss_averages_op = _add_loss_summaries(total_loss)
 	# global_step = tf.train.get_or_create_global_step()
 	lr = tf.cond(tf.less(global_step, 10000),
-				 lambda: tf.constant(0.001),
+				 lambda: tf.constant(0.01),
 				 lambda: tf.cond(tf.less(global_step, 20000),
-								 lambda: tf.constant(0.0005),
+								 lambda: tf.constant(0.001),
 								 lambda: tf.cond(tf.less(global_step, 30000),
 												 lambda: tf.constant(0.00025),
 												 lambda: tf.constant(0.00025))))

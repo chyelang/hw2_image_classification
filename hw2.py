@@ -134,18 +134,14 @@ def inference(images):
 
 	# inception3a
 	with tf.variable_scope('inception3a') as scope:
-		inception3a = layers.inception_v2_module(pool2, 192, map_size=(64, 64, 96, 32), reduce1x1_size=64, batch_norm=True)
+		inception3a = layers.inception_v2_module(pool2, 192, map_size=(64, 96, 96, 64), reduce1x1_size=64, batch_norm=True)
 
 	# inception3b
 	with tf.variable_scope('inception3b') as scope:
-		inception3b = layers.inception_v2_module(inception3a, 256, map_size=(64, 96, 96, 64), reduce1x1_size=64, batch_norm=True)
-
-	# inception3c
-	with tf.variable_scope('inception3c') as scope:
-		inception3c = layers.inception_v2_module(inception3b, 320, map_size=(96, 160, 128, 96), reduce1x1_size=64, batch_norm=True)
+		inception3b = layers.inception_v2_module(inception3a, 320, map_size=(96, 160, 128, 96), reduce1x1_size=64, batch_norm=True)
 
 	# pool3
-	pool3 = tf.nn.max_pool(inception3c, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+	pool3 = tf.nn.max_pool(inception3b, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool3')
 
 	# inception4a
@@ -156,17 +152,13 @@ def inference(images):
 	with tf.variable_scope('inception4b') as scope:
 		inception4b = layers.inception_v2_module(inception4a, 576, map_size=(64, 256, 192, 128), reduce1x1_size=96, batch_norm=True)
 
-	# inception4c
-	with tf.variable_scope('inception4c') as scope:
-		inception4c = layers.inception_v2_module(inception4b, 640, map_size=(32, 352, 256, 128), reduce1x1_size=128, batch_norm=True)
-
 	# pool4
-	pool4 = tf.nn.max_pool(inception4c, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+	pool4 = tf.nn.max_pool(inception4b, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool4')
 
 	# inception5a
 	with tf.variable_scope('inception5a') as scope:
-		inception5a = layers.inception_v2_module(pool4, 768, map_size=(32, 512, 352, 128), reduce1x1_size=192, batch_norm=True)
+		inception5a = layers.inception_v2_module(pool4, 640, map_size=(32, 512, 352, 128), reduce1x1_size=128, batch_norm=True)
 
 	# pool5
 	pool5 = tf.nn.avg_pool(inception5a, ksize=[1, 7, 7, 1], strides=[1, 1, 1, 1],

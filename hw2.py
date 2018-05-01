@@ -169,7 +169,7 @@ def inference(images):
 		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 1024,  dropout = False, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-5)
+		dense1 = layers.dense_layer(reshape, dim, 1024,  dropout = True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
@@ -253,9 +253,9 @@ def train(total_loss, global_step):
 	# Variables that affect learning rate.
 	# # NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 扫过多少example之后才算一个epoch，一般是设置成样本总数吧？
 	# # FLAGS.batch_size = 每个batch选取多少个example
-	num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
-	# # 扫描完一个batch之后，梯度更新了一次，算一个step，算运行了一次graph。 下式计算出需要扫描多少个batch之后才进行一次lr decay
-	decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
+	# num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
+	# # # 扫描完一个batch之后，梯度更新了一次，算一个step，算运行了一次graph。 下式计算出需要扫描多少个batch之后才进行一次lr decay
+	# decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
 
 	# Decay the learning rate exponentially based on the number of steps.
 	##　decayed_learning_rate = learning_rate *　decay_rate ^ (global_step / decay_steps)
@@ -270,20 +270,22 @@ def train(total_loss, global_step):
 	# Generate moving averages of all losses and associated summaries.
 	loss_averages_op = _add_loss_summaries(total_loss)
 	# global_step = tf.train.get_or_create_global_step()
-	lr = tf.cond(tf.less(global_step, 10000),
-				 lambda: tf.constant(0.001),
-				 lambda: tf.cond(tf.less(global_step, 20000),
-								 lambda: tf.constant(0.0005),
-								 lambda: tf.cond(tf.less(global_step, 30000),
-												 lambda: tf.constant(0.00025),
-												 lambda: tf.constant(0.00025))))
+	# lr = tf.cond(tf.less(global_step, 10000),
+	# 			 lambda: tf.constant(0.001),
+	# 			 lambda: tf.cond(tf.less(global_step, 20000),
+	# 							 lambda: tf.constant(0.0005),
+	# 							 lambda: tf.cond(tf.less(global_step, 30000),
+	# 											 lambda: tf.constant(0.00025),
+	# 											 lambda: tf.constant(0.00025))))
+	lr = tf.Variable(0.001, trainable=False, dtype=tf.float32)
+	lr_decrease_op = tf.assign(lr, tf.divide(lr, 2.0))
 	tf.summary.scalar('learning_rate', lr)
 	# Compute gradients.
 	with tf.control_dependencies([loss_averages_op]):
 		# opt = tf.train.GradientDescentOptimizer(lr)
 		opt = tf.train.AdamOptimizer(learning_rate=lr)
-		lr_actu = opt._lr
-		tf.summary.scalar('learning_rate_actu', lr_actu)
+		# lr_actu = opt._lr
+		# tf.summary.scalar('learning_rate_actu', lr_actu)
 		grads = opt.compute_gradients(total_loss)
 
 	# Apply gradients.

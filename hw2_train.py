@@ -59,6 +59,7 @@ def train():
 		# Build a Graph that trains the model with one batch of examples and
 		# updates the model parameters.
 		train_op = hw2.train(loss, global_step)
+		lr_decrease_op = tf.get_default_graph().get_tensor_by_name('Assign:0')
 		with tf.variable_scope("acc_monitor") as scope:
 			top_k_op = tf.nn.in_top_k(logits, labels, 1)
 			train_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="train_acc")
@@ -126,6 +127,9 @@ def train():
 							self.wait = 0
 						else:
 							self.wait += 1
+							if self.wait >= self.patience / 2:
+								print('Divide lr by 2!')
+								run_context.session.run(lr_decrease_op)
 							if self.wait >= self.patience:
 								print('Early stop training!')
 								run_context.request_stop()
@@ -144,7 +148,7 @@ def train():
 				config=tf.ConfigProto(
 					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op, feed_dict={keep_prob1: 0.6})
+				mon_sess.run(train_op, feed_dict={keep_prob1: 0.5})
 				# 每一次run都会调用一次所有的hook
 				# 每输入一个batch的数据，则global step加1
 

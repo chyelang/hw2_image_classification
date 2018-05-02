@@ -41,7 +41,7 @@ def image_augmentation(image):
 	image = tf.expand_dims(image, 0)
 
 	# randomly scale image
-	scale = tf.random_uniform((), 0.9, 1, dtype=tf.float32)
+	scale = tf.random_uniform((), 0.95, 1, dtype=tf.float32)
 	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
 	x2 = y2 = 0.5 + 0.5 * scale
 	tf.summary.scalar("scale", scale)
@@ -49,21 +49,21 @@ def image_augmentation(image):
 	tf.assign(boxes, [y1, x1, y2, x2])
 	boxes = tf.expand_dims(boxes, axis=0)
 	box_ind = tf.zeros((1), dtype=tf.int32)
-	crop_size = tf.constant([image_dim, image_dim], dtype=np.int32)	#
+	crop_size = tf.constant([image_dim, image_dim], dtype=np.int32)
 	image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
 
 	# randomly glimpse
 	init_values = np.ones([1, image_dim, image_dim, 3])
 	image_translated = tf.Variable(init_values, trainable=False, dtype=np.float32)
 	seed = tf.random_uniform((), 0, 3, dtype=tf.int32)
-	offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim, 0.1)
+	offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim, 0.05)
 	offset = np.expand_dims(offset,0)
 	glimpse = tf.image.extract_glimpse(image, size, offset)
 	image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
 
 	# # Rotation (at finer angles)
 	# # degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
-	degrees_angle = tf.random_uniform((), -5, 5, dtype=tf.float32)
+	degrees_angle = tf.random_uniform((), -2, 2, dtype=tf.float32)
 	tf.summary.scalar("rotate_angle", degrees_angle)
 	radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
 	image = tf.contrib.image.rotate(image, radian_value)

@@ -132,7 +132,7 @@ def inference(images):
 
 	# inception3
 	with tf.variable_scope('inception3') as scope:
-		inception3 = layers.inception_v2_module(pool2, 320, map_size=(32, 96, 96, 32), reduce1x1_size=96, batch_norm=True)
+		inception3 = layers.inception_v2_module(pool2, 320, map_size=(32, 64, 64, 32), reduce1x1_size=96, batch_norm=True)
 
 	# pool3
 	pool3 = tf.nn.max_pool(inception3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -143,15 +143,15 @@ def inference(images):
 		reshape = tf.reshape(pool3, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 1024,  dropout = True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
+		dense1 = layers.dense_layer(reshape, dim, 512,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
 	# tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
 	# and performs the softmax internally for efficiency.
 	with tf.variable_scope('softmax_linear') as scope:
-		weights = _variable_with_weight_decay('weights', [1024, NUM_CLASSES],
-											  stddev=1 / 1024.0, wd=None)
+		weights = _variable_with_weight_decay('weights', [512, NUM_CLASSES],
+											  stddev=1 / 512.0, wd=None)
 		biases = _variable_on_cpu('biases', [NUM_CLASSES],
 								  tf.constant_initializer(0.0))
 		softmax_linear = tf.add(tf.matmul(dense1, weights), biases, name=scope.name)

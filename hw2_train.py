@@ -133,6 +133,8 @@ def train():
 							if self.wait >= self.patience:
 								print('Early stop training!')
 								run_context.request_stop()
+		config_tf = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement, allow_soft_placement=True)
+		config_tf.gpu_options.allow_growth = True
 
 		keep_prob1 = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
 		# keep_prob2 = tf.get_default_graph().get_tensor_by_name('dense2/keep_prob:0')
@@ -145,8 +147,7 @@ def train():
 					    early_stop_hook],
 				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
 				log_step_count_steps=100,
-				config=tf.ConfigProto(
-					log_device_placement=FLAGS.log_device_placement)) as mon_sess:
+				config=config_tf) as mon_sess:
 			while not mon_sess.should_stop():
 				mon_sess.run(train_op, feed_dict={keep_prob1: 0.5})
 				# 每一次run都会调用一次所有的hook

@@ -59,16 +59,17 @@ def image_augmentation(image):
 	# crop_size = tf.constant([image_dim, image_dim], dtype=np.int32)
 	# image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
 
-	# randomly glimpse
-	# init_values = np.ones([1, image_dim, image_dim, 3])
-	init_values = tf.constant(1.0, shape=(1, image_dim, image_dim, 3))
-	image_translated = tf.Variable(init_values, trainable=False, dtype=tf.float32)
-	seed = tf.random_uniform((), 0, 6, dtype=tf.int32)
-	offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim, 0.10)
-	offset = np.expand_dims(offset, 0)
-	glimpse = tf.image.extract_glimpse(image, size, offset)
-	tf.assign(image_translated, init_values)
-	image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
+	# # randomly glimpse
+	# # has bug to fix
+	# # init_values = np.ones([1, image_dim, image_dim, 3])
+	# init_values = tf.constant(1.0, shape=(1, image_dim, image_dim, 3))
+	# image_translated = tf.Variable(init_values, trainable=False, dtype=tf.float32)
+	# seed = tf.random_uniform((), 0, 6, dtype=tf.int32)
+	# offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim, 0.10)
+	# offset = np.expand_dims(offset, 0)
+	# glimpse = tf.image.extract_glimpse(image, size, offset)
+	# tf.assign(image_translated, init_values)
+	# image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
 
 	# # Rotation (at finer angles)
 	# # degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
@@ -91,9 +92,9 @@ def image_augmentation(image):
 	# image = image[coords[0], coords[1], :].assign(0)
 
 	image = tf.reduce_sum(image, 0)
-	# # Rotation (at 90 degrees)
-	# seed = random.randint(0, 3)
-	# image = tf.image.rot90(image, k=seed)
+	# Rotation (at 90 degrees)
+	seed = random.randint(0, 3)
+	image = tf.image.rot90(image, k=seed)
 
 	# Randomly flip the image horizontally and vertically.
 	image = tf.image.random_flip_left_right(image)

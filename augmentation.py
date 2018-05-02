@@ -4,34 +4,34 @@ import random
 from math import ceil, floor
 
 
-def get_translate_parameters(index, image_dim):
+def get_translate_parameters(index, image_dim, bias):	
 	if index == 0:  # Translate left 20 percent
-		offset = np.array([0.0, 0.2], dtype=np.float32)
-		size = np.array([image_dim, ceil(0.8 * image_dim)], dtype=np.int32)
+		offset = np.array([0.0, bias], dtype=np.float32)
+		size = np.array([image_dim, ceil((1-bias) * image_dim)], dtype=np.int32)
 		w_start = 0
-		w_end = int(ceil(0.8 * image_dim))
+		w_end = int(ceil((1-bias) * image_dim))
 		h_start = 0
 		h_end = image_dim
 	elif index == 1:  # Translate right 20 percent
-		offset = np.array([0.0, -0.2], dtype=np.float32)
-		size = np.array([image_dim, ceil(0.8 * image_dim)], dtype=np.int32)
-		w_start = int(floor((1 - 0.8) * image_dim))
+		offset = np.array([0.0, -bias], dtype=np.float32)
+		size = np.array([image_dim, ceil((1-bias) * image_dim)], dtype=np.int32)
+		w_start = int(floor((1 - (1-bias)) * image_dim))
 		w_end = image_dim
 		h_start = 0
 		h_end = image_dim
 	elif index == 2:  # Translate top 20 percent
-		offset = np.array([0.2, 0.0], dtype=np.float32)
-		size = np.array([ceil(0.8 * image_dim), image_dim], dtype=np.int32)
+		offset = np.array([bias, 0.0], dtype=np.float32)
+		size = np.array([ceil((1-bias) * image_dim), image_dim], dtype=np.int32)
 		w_start = 0
 		w_end = image_dim
 		h_start = 0
-		h_end = int(ceil(0.8 * image_dim))
+		h_end = int(ceil((1-bias) * image_dim))
 	else:  # Translate bottom 20 percent
-		offset = np.array([-0.2, 0.0], dtype=np.float32)
-		size = np.array([ceil(0.8 * image_dim), image_dim], dtype=np.int32)
+		offset = np.array([-bias, 0.0], dtype=np.float32)
+		size = np.array([ceil((1-bias) * image_dim), image_dim], dtype=np.int32)
 		w_start = 0
 		w_end = image_dim
-		h_start = int(floor((1 - 0.8) * image_dim))
+		h_start = int(floor((1 - (1-bias)) * image_dim))
 		h_end = image_dim
 	return offset, size, w_start, w_end, h_start, h_end
 
@@ -40,33 +40,33 @@ def image_augmentation(image):
 	image_dim = image.get_shape().as_list()[0]
 	image = tf.expand_dims(image, 0)
 
-	# # randomly scale image
-	# scale = tf.random_uniform((), 0.8, 1, dtype=tf.float32)
-	# x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
-	# x2 = y2 = 0.5 + 0.5 * scale
-	# tf.summary.scalar("scale", scale)
-	# boxes = tf.Variable([y1, x1, y2, x2], dtype=np.float32)
-	# tf.assign(boxes, [y1, x1, y2, x2])
-	# boxes = tf.expand_dims(boxes, axis=0)
-	# box_ind = tf.zeros((1), dtype=tf.int32)
-	# crop_size = tf.constant([image_dim, image_dim], dtype=np.int32)	#
-	# image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
+	# randomly scale image
+	scale = tf.random_uniform((), 0.9, 1, dtype=tf.float32)
+	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
+	x2 = y2 = 0.5 + 0.5 * scale
+	tf.summary.scalar("scale", scale)
+	boxes = tf.Variable([y1, x1, y2, x2], dtype=np.float32)
+	tf.assign(boxes, [y1, x1, y2, x2])
+	boxes = tf.expand_dims(boxes, axis=0)
+	box_ind = tf.zeros((1), dtype=tf.int32)
+	crop_size = tf.constant([image_dim, image_dim], dtype=np.int32)	#
+	image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
 
-	# # randomly glimpse
-	# init_values = np.ones([1, image_dim, image_dim, 3])
-	# image_translated = tf.Variable(init_values, trainable=False, dtype=np.float32)
-	# seed = tf.random_uniform((), 0, 3, dtype=tf.int32)
-	# offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim)
-	# offset = np.expand_dims(offset,0)
-	# glimpse = tf.image.extract_glimpse(image, size, offset)
-	# image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
+	# randomly glimpse
+	init_values = np.ones([1, image_dim, image_dim, 3])
+	image_translated = tf.Variable(init_values, trainable=False, dtype=np.float32)
+	seed = tf.random_uniform((), 0, 3, dtype=tf.int32)
+	offset, size, w_start, w_end, h_start, h_end = get_translate_parameters(seed, image_dim, 0.1)
+	offset = np.expand_dims(offset,0)
+	glimpse = tf.image.extract_glimpse(image, size, offset)
+	image = image_translated[:, h_start: h_start + size[0], w_start: w_start + size[1], :].assign(glimpse)
 
 	# # Rotation (at finer angles)
 	# # degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
-	# degrees_angle = tf.random_uniform((), -10, 10, dtype=tf.float32)
-	# tf.summary.scalar("rotate_angle", degrees_angle)
-	# radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
-	# image = tf.contrib.image.rotate(image, radian_value)
+	degrees_angle = tf.random_uniform((), -5, 5, dtype=tf.float32)
+	tf.summary.scalar("rotate_angle", degrees_angle)
+	radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
+	image = tf.contrib.image.rotate(image, radian_value)
 
 	# add_salt_pepper_noise
 	# salt_vs_pepper = 0.2

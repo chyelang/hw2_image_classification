@@ -52,7 +52,7 @@ def image_augmentation(image):
 	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
 	x2 = y2 = 0.5 + 0.5 * scale
 	tf.summary.scalar("scale", scale)
-	boxes = tf.Variable([y1, x1, y2, x2], dtype=np.float32)
+	boxes = tf.Variable([y1, x1, y2, x2], trainable=False, dtype=np.float32)
 	tf.assign(boxes, [y1, x1, y2, x2])
 	boxes = tf.expand_dims(boxes, axis=0)
 	box_ind = tf.zeros((1), dtype=tf.int32)

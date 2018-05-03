@@ -1,6 +1,8 @@
 import tensorflow as tf
 # parse arguments passed by command line by FLAGS
 FLAGS = tf.app.flags.FLAGS
+import re
+TOWER_NAME = 'tower'
 
 def _activation_summary(x):
 	"""Helper to create summaries for activations.
@@ -13,7 +15,8 @@ def _activation_summary(x):
 	Returns:
 	  nothing
 	"""
-	tensor_name =  x.op.name
+	tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name)
+	# tensor_name =  x.op.name
 	tf.summary.histogram(tensor_name + '/activations', x)
 	tf.summary.scalar(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
 

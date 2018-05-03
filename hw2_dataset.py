@@ -13,6 +13,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',level=log
 import argparse
 import configparser
 import re
+import random
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--section', help='lenovo, tencent or server', type=str)
@@ -43,6 +44,7 @@ def main():
                 os.mkdir(label_dir_test)
             count = 0
             files = os.listdir(dset_path_train + '/' + label_dir)
+            random.shuffle(files)
             num_example_train += len(files)
             for file in files:
                 shutil.move(dset_path_train + '/' + label_dir+'/'+file,

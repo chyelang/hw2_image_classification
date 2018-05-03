@@ -41,11 +41,12 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = hw2_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999  # The decay to use for the moving average.
-NUM_EPOCHS_PER_DECAY = 70  # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.2  # Learning rate decay factor.
+# NUM_EPOCHS_PER_DECAY = 70  # Epochs after which learning rate decays.
+# LEARNING_RATE_DECAY_FACTOR = 0.2  # Learning rate decay factor.
 # INITIAL_LEARNING_RATE = 0.1       # Initial learning rate. for gradient desent
-INITIAL_LEARNING_RATE = 0.001  # Initial learning rate. for adam
+# INITIAL_LEARNING_RATE = 0.001  # Initial learning rate. for adam
 
+TOWER_NAME = 'tower'
 
 def distorted_inputs():
 	"""Construct distorted input for CIFAR training using the Reader ops.
@@ -143,15 +144,15 @@ def inference(images):
 		reshape = tf.reshape(pool3, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 512,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-3)
+		dense1 = layers.dense_layer(reshape, dim, 256,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-3)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
 	# tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
 	# and performs the softmax internally for efficiency.
 	with tf.variable_scope('softmax_linear') as scope:
-		weights = _variable_with_weight_decay('weights', [512, NUM_CLASSES],
-											  stddev=1 / 512.0, wd=None)
+		weights = _variable_with_weight_decay('weights', [256, NUM_CLASSES],
+											  stddev=1 / 256.0, wd=None)
 		biases = _variable_on_cpu('biases', [NUM_CLASSES],
 								  tf.constant_initializer(0.0))
 		softmax_linear = tf.add(tf.matmul(dense1, weights), biases, name=scope.name)

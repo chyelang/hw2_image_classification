@@ -218,11 +218,11 @@ def train():
 
 					loss_value = run_values.results[0]
 					train_acc = run_values.results[1]
-					examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
-					sec_per_batch = float(duration / FLAGS.log_frequency)
-					format_str = ('%s: global step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
+					examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size * FLAGS.num_gpus / duration
+					sec_per_batch = float(duration / (FLAGS.log_frequency * FLAGS.num_gpus))
+					format_str = ('%s: equal global step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
 								  'sec/batch)')
-					print(format_str % (datetime.now(), self._step, loss_value, train_acc,
+					print(format_str % (datetime.now(), self._step * FLAGS.num_gpus, loss_value, train_acc,
 										examples_per_sec, sec_per_batch))
 
 
@@ -277,7 +277,6 @@ def train():
 				config=config_tf) as mon_sess:
 			while not mon_sess.should_stop():
 				mon_sess.run(train_op, feed_dict=feed_dict)
-
 
 def main(argv=None):
 	# # why to delete? 因为此处的train_dir只是存放log和checkpoint的，并不是训练数据

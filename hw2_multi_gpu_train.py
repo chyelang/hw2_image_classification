@@ -127,7 +127,7 @@ def train():
 		# number of batches processed * FLAGS.num_gpus.
 		global_step = tf.get_variable(
 			'global_step', [],
-			initializer=tf.constant_initializer(0), trainable=False)
+			initializer=tf.constant_initializer(0), trainable=False, dtype=tf.int32)
 
 		# Calculate the learning rate schedule.
 		lr = tf.Variable(0.001, trainable=False, dtype=tf.float32)
@@ -136,145 +136,147 @@ def train():
 		# Create an optimizer that performs gradient descent.
 		opt = tf.train.AdamOptimizer(learning_rate=lr)
 
-	# Get images and labels for CIFAR-10.
-	images, labels = hw2.distorted_inputs()
-	batch_queue = tf.contrib.slim.prefetch_queue.prefetch_queue(
-		[images, labels], capacity=2 * FLAGS.num_gpus)
-	# Calculate the gradients for each model tower.
-	tower_grads = []
-	tower_train_acc_op = []
+		images, labels = hw2.distorted_inputs()
+		batch_queue = tf.contrib.slim.prefetch_queue.prefetch_queue(
+			[images, labels], capacity=2 * FLAGS.num_gpus)
+		# Calculate the gradients for each model tower.
+		tower_grads = []
+		tower_train_acc_op = []
+		keep_prob = []
 
-	with tf.variable_scope(tf.get_variable_scope()):
-		for i in range(FLAGS.num_gpus):
-			with tf.device('/gpu:%d' % i):
-				with tf.name_scope('%s_%d' % (hw2.TOWER_NAME, i)) as scope:
-					# Dequeues one batch for the GPU
-					image_batch, label_batch = batch_queue.dequeue()
-					# Calculate the loss for one tower of the CIFAR model. This function
-					# constructs the entire CIFAR model but shares the variables across
-					# all towers.
-					loss, train_acc_op = tower_loss(scope, image_batch, label_batch)
+		with tf.variable_scope(tf.get_variable_scope()):
+			for i in range(FLAGS.num_gpus):
+				with tf.device('/gpu:%d' % i):
+					with tf.name_scope('%s_%d' % (hw2.TOWER_NAME, i)) as scope:
+						# Dequeues one batch for the GPU
+						image_batch, label_batch = batch_queue.dequeue()
+						# Calculate the loss for one tower of the CIFAR model. This function
+						# constructs the entire CIFAR model but shares the variables across
+						# all towers.
+						loss, train_acc_op = tower_loss(scope, image_batch, label_batch)
 
-					# Reuse variables for the next tower.
-					tf.get_variable_scope().reuse_variables()
+						# Reuse variables for the next tower.
+						tf.get_variable_scope().reuse_variables()
 
-					# Retain the summaries from the final tower.
-					summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
+						# Retain the summaries from the final tower.
+						summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
 
-					# Calculate the gradients for the batch of data on this CIFAR tower.
-					grads = opt.compute_gradients(loss)
+						# Calculate the gradients for the batch of data on this CIFAR tower.
+						grads = opt.compute_gradients(loss)
 
-					# Keep track of the gradients across all towers.
-					tower_grads.append(grads)
-					tower_train_acc_op.append(train_acc_op)
+						# Keep track of the gradients across all towers.
+						tower_grads.append(grads)
+						tower_train_acc_op.append(train_acc_op)
+						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope+'dense1/keep_prob:0'))
 
-	# We must calculate the mean of each gradient. Note that this is the
-	# synchronization point across all towers.
-	grads = average_gradients(tower_grads)
-	train_acc_op_avg = tf.divide(tf.reduce_sum(tower_train_acc_op), FLAGS.num_gpus)
+		# We must calculate the mean of each gradient. Note that this is the
+		# synchronization point across all towers.
+		grads = average_gradients(tower_grads)
+		train_acc_op_avg = tf.divide(tf.reduce_sum(tower_train_acc_op), FLAGS.num_gpus)
 
-	# Add a summary to track the learning rate.
-	summaries.append(tf.summary.scalar('learning_rate', lr))
-	summaries.append(tf.summary.scalar('train_acc_avg', train_acc_op_avg))
+		# Add a summary to track the learning rate.
+		summaries.append(tf.summary.scalar('learning_rate', lr))
+		summaries.append(tf.summary.scalar('train_acc_avg', train_acc_op_avg))
 
-	# Add histograms for gradients.
-	for grad, var in grads:
-		if grad is not None:
-			summaries.append(tf.summary.histogram(var.op.name + '/gradients', grad))
+		# Add histograms for gradients.
+		for grad, var in grads:
+			if grad is not None:
+				summaries.append(tf.summary.histogram(var.op.name + '/gradients', grad))
 
-	# Apply the gradients to adjust the shared variables.
-	apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
+		# Apply the gradients to adjust the shared variables.
+		apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
 
-	# Add histograms for trainable variables.
-	for var in tf.trainable_variables():
-		summaries.append(tf.summary.histogram(var.op.name, var))
+		# Add histograms for trainable variables.
+		for var in tf.trainable_variables():
+			summaries.append(tf.summary.histogram(var.op.name, var))
 
-	# Track the moving averages of all trainable variables.
-	variable_averages = tf.train.ExponentialMovingAverage(
-		hw2.MOVING_AVERAGE_DECAY, global_step)
-	variables_averages_op = variable_averages.apply(tf.trainable_variables())
+		# Track the moving averages of all trainable variables.
+		variable_averages = tf.train.ExponentialMovingAverage(
+			hw2.MOVING_AVERAGE_DECAY, global_step)
+		variables_averages_op = variable_averages.apply(tf.trainable_variables())
 
-	# Group all updates to into a single train op.
-	train_op = tf.group(apply_gradient_op, variables_averages_op)
-
-
-	class _LoggerHook(tf.train.SessionRunHook):
-		"""Logs loss and runtime."""
-
-		def begin(self):
-			self._step = 0
-			self._start_time = time.time()
-
-		def before_run(self, run_context):
-			self._step += 1
-			return tf.train.SessionRunArgs([loss, train_acc_op_avg])  # Asks for loss value.
-
-		def after_run(self, run_context, run_values):
-			if self._step % FLAGS.log_frequency == 0:
-				current_time = time.time()
-				duration = current_time - self._start_time
-				self._start_time = current_time
-
-				loss_value = run_values.results[0]
-				train_acc = run_values.results[1]
-				examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
-				sec_per_batch = float(duration / FLAGS.log_frequency)
-				format_str = ('%s: global step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
-							  'sec/batch)')
-				print(format_str % (datetime.now(), self._step, loss_value, train_acc,
-									examples_per_sec, sec_per_batch))
+		# Group all updates to into a single train op.
+		train_op = tf.group(apply_gradient_op, variables_averages_op)
 
 
-	class _EarlyStoppingHook(tf.train.SessionRunHook):
-		"""Hook that requests stop at a specified step."""
+		class _LoggerHook(tf.train.SessionRunHook):
+			"""Logs loss and runtime."""
 
-		def __init__(self, min_delta=0.01, patience=10):
-			self.patience = patience
-			self.min_delta = min_delta
-			self._ckpt_step = -1
-			self.best = -1
-			self.wait = 0
-			self.current = 0
+			def begin(self):
+				self._step = 0
+				self._start_time = time.time()
 
-		def after_run(self, run_context, run_values):
-			ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
-			if ckpt and ckpt.model_checkpoint_path:
-				cur_ckpt_step = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
-				if cur_ckpt_step > self._ckpt_step:
-					self._ckpt_step = cur_ckpt_step
-					self.current = hw2_eval.evaluate()
-					format_str = '%s: step %d, val_acc = %.3f'
-					print(format_str % (datetime.now(), self._ckpt_step, self.current))
-					if (self.current - self.min_delta) > self.best:
-						self.best = self.current
-						self.wait = 0
-					else:
-						self.wait += 1
-						if self.wait >= self.patience / 2:
-							print('Divide lr by 2!')
-							run_context.session.run(lr_decrease_op)
-						if self.wait >= self.patience:
-							print('Early stop training!')
-							run_context.request_stop()
+			def before_run(self, run_context):
+				self._step += 1
+				return tf.train.SessionRunArgs([loss, train_acc_op_avg])  # Asks for loss value.
+
+			def after_run(self, run_context, run_values):
+				if self._step % FLAGS.log_frequency == 0:
+					current_time = time.time()
+					duration = current_time - self._start_time
+					self._start_time = current_time
+
+					loss_value = run_values.results[0]
+					train_acc = run_values.results[1]
+					examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
+					sec_per_batch = float(duration / FLAGS.log_frequency)
+					format_str = ('%s: global step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
+								  'sec/batch)')
+					print(format_str % (datetime.now(), self._step, loss_value, train_acc,
+										examples_per_sec, sec_per_batch))
 
 
-	config_tf = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement, allow_soft_placement=True)
-	# config_tf.gpu_options.allow_growth = True
+		class _EarlyStoppingHook(tf.train.SessionRunHook):
+			"""Hook that requests stop at a specified step."""
 
-	keep_prob1 = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
-	# keep_prob2 = tf.get_default_graph().get_tensor_by_name('dense2/keep_prob:0')
-	early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
-	with tf.train.MonitoredTrainingSession(
-			checkpoint_dir=FLAGS.log_path,
-			hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
-				   tf.train.NanTensorHook(loss),
-				   _LoggerHook(),
-				   early_stop_hook],
-			save_checkpoint_secs=FLAGS.save_checkpoint_secs,
-			log_step_count_steps=100,
-			config=config_tf) as mon_sess:
-		while not mon_sess.should_stop():
-			mon_sess.run(train_op, feed_dict={keep_prob1: 0.5})  # Create a saver.
+			def __init__(self, min_delta=0.01, patience=10):
+				self.patience = patience
+				self.min_delta = min_delta
+				self._ckpt_step = -1
+				self.best = -1
+				self.wait = 0
+				self.current = 0
+
+			def after_run(self, run_context, run_values):
+				ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
+				if ckpt and ckpt.model_checkpoint_path:
+					cur_ckpt_step = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
+					if cur_ckpt_step > self._ckpt_step:
+						self._ckpt_step = cur_ckpt_step
+						self.current = hw2_eval.evaluate()
+						format_str = '%s: step %d, val_acc = %.3f'
+						print(format_str % (datetime.now(), self._ckpt_step, self.current))
+						if (self.current - self.min_delta) > self.best:
+							self.best = self.current
+							self.wait = 0
+						else:
+							self.wait += 1
+							if self.wait >= self.patience / 2:
+								print('Divide lr by 2!')
+								run_context.session.run(lr_decrease_op)
+							if self.wait >= self.patience:
+								print('Early stop training!')
+								run_context.request_stop()
+
+
+		config_tf = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement, allow_soft_placement=True)
+		# config_tf.gpu_options.allow_growth = True
+
+		feed_dict = {}
+		for item in keep_prob:
+			feed_dict[item] = 0.5
+		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
+		with tf.train.MonitoredTrainingSession(
+				checkpoint_dir=FLAGS.log_path,
+				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
+					   tf.train.NanTensorHook(loss),
+					   _LoggerHook(),
+					   early_stop_hook],
+				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
+				log_step_count_steps=100,
+				config=config_tf) as mon_sess:
+			while not mon_sess.should_stop():
+				mon_sess.run(train_op, feed_dict=feed_dict)
 
 
 def main(argv=None):

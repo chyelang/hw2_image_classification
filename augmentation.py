@@ -48,16 +48,16 @@ def image_augmentation(image):
 	image = tf.expand_dims(image, 0)
 
 	# # randomly scale image
-	scale = tf.random_uniform((), 0.9, 1, dtype=tf.float32)
-	x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
-	x2 = y2 = 0.5 + 0.5 * scale
-	tf.summary.scalar("scale", scale)
-	boxes = tf.Variable([y1, x1, y2, x2], trainable=False, dtype=np.float32)
-	tf.assign(boxes, [y1, x1, y2, x2])
-	boxes = tf.expand_dims(boxes, axis=0)
-	box_ind = tf.zeros((1), dtype=tf.int32)
-	crop_size = tf.constant([image_dim, image_dim], dtype=np.int32)
-	image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
+	# scale = tf.random_uniform((), 0.9, 1, dtype=tf.float32)
+	# x1 = y1 = 0.5 - 0.5 * scale  # To scale centrally
+	# x2 = y2 = 0.5 + 0.5 * scale
+	# tf.summary.scalar("scale", scale)
+	# boxes = tf.Variable([y1, x1, y2, x2], trainable=False, dtype=np.float32)
+	# tf.assign(boxes, [y1, x1, y2, x2])
+	# boxes = tf.expand_dims(boxes, axis=0)
+	# box_ind = tf.zeros((1), dtype=tf.int32)
+	# crop_size = tf.constant([image_dim, image_dim], dtype=np.int32)
+	# image = tf.image.crop_and_resize(image, boxes, box_ind, crop_size)
 
 	# # randomly glimpse
 	# # has bug to fix
@@ -73,10 +73,10 @@ def image_augmentation(image):
 
 	# # Rotation (at finer angles)
 	# degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
-	degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
-	tf.summary.scalar("rotate_angle", degrees_angle)
-	radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
-	image = tf.contrib.image.rotate(image, radian_value)
+	# degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
+	# tf.summary.scalar("rotate_angle", degrees_angle)
+	# radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
+	# image = tf.contrib.image.rotate(image, radian_value)
 
 	# add_salt_pepper_noise
 	# salt_vs_pepper = 0.2

@@ -114,9 +114,9 @@ def inference(images):
 	#
 	# conv_stack1
 	with tf.variable_scope('conv_stack1') as scope:
-		kernel_list = [[3,3,3,96]]
-		stride_list = [[1,2,2,1]]
-		padding_list = ['SAME']
+		kernel_list = [[3,3,3,64], [3,3,64,128]]
+		stride_list = [[1,1,1,1], [1,2,2,1]]
+		padding_list = ['SAME', 'SAME']
 		conv_stack1 = layers.conv2d_stack(images, kernel_list, stride_list, padding_list, batch_norm = True)
 
 	# pool1
@@ -125,7 +125,7 @@ def inference(images):
 
 	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v2_module(pool1, 96, map_size=(64, 64, 64, 64), reduce1x1_size=64, batch_norm=True)
+		inception2 = layers.inception_v2_module(pool1, 128, map_size=(64, 64, 64, 64), reduce1x1_size=64, batch_norm=True)
 
 	# pool2
 	pool2 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -144,15 +144,15 @@ def inference(images):
 		reshape = tf.reshape(pool3, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 256,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-1)
+		dense1 = layers.dense_layer(reshape, dim, 512,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-0)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
 	# tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
 	# and performs the softmax internally for efficiency.
 	with tf.variable_scope('softmax_linear') as scope:
-		weights = _variable_with_weight_decay('weights', [256, NUM_CLASSES],
-											  stddev=1 / 256.0, wd=None)
+		weights = _variable_with_weight_decay('weights', [512, NUM_CLASSES],
+											  stddev=1 / 512.0, wd=None)
 		biases = _variable_on_cpu('biases', [NUM_CLASSES],
 								  tf.constant_initializer(0.0))
 		softmax_linear = tf.add(tf.matmul(dense1, weights), biases, name=scope.name)

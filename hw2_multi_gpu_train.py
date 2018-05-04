@@ -167,7 +167,9 @@ def train():
 						# Keep track of the gradients across all towers.
 						tower_grads.append(grads)
 						tower_train_acc_op.append(train_acc_op)
-						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope+'dense1/keep_prob:0'))
+						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'keep_prob2:0'))
+						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope +'keep_prob3:0'))
+						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'dense1/keep_prob:0'))
 
 		# We must calculate the mean of each gradient. Note that this is the
 		# synchronization point across all towers.

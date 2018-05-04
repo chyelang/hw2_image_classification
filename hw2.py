@@ -131,16 +131,19 @@ def inference(images):
 	pool2 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool2')
 
+	keep_prob2 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob2")
+	dropout2 = layers.spatial_dropout(pool2, keep_prob=keep_prob2, name='dropout2')
+
 	# inception3
 	with tf.variable_scope('inception3') as scope:
-		inception3 = layers.inception_v2_module(pool2, 320, map_size=(32, 64, 64, 32), reduce1x1_size=96, batch_norm=True)
+		inception3 = layers.inception_v2_module(dropout2, 320, map_size=(32, 64, 64, 32), reduce1x1_size=96, batch_norm=True)
 
 	# pool3
 	pool3 = tf.nn.max_pool(inception3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool3')
 
-	keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-	dropout3 = tf.nn.dropout(pool3, keep_prob=keep_prob)
+	keep_prob3 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob3")
+	dropout3 = layers.spatial_dropout(pool3, keep_prob=keep_prob3, name='dropout3')
 
 	# dense1
 	with tf.variable_scope('dense1') as scope:

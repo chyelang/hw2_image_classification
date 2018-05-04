@@ -265,7 +265,7 @@ def train():
 		feed_dict = {}
 		for item in keep_prob:
 			feed_dict[item] = 0.5
-		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=15)
+		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=10)
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),

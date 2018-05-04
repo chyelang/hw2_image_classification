@@ -139,12 +139,15 @@ def inference(images):
 	pool3 = tf.nn.max_pool(inception3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool3')
 
+	keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
+	dropout3 = tf.nn.dropout(pool3, keep_prob=keep_prob)
+
 	# dense1
 	with tf.variable_scope('dense1') as scope:
-		reshape = tf.reshape(pool3, [images.get_shape().as_list()[0], -1])
+		reshape = tf.reshape(dropout3, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 256,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
+		dense1 = layers.dense_layer(reshape, dim, 256,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-3)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),

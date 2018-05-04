@@ -85,9 +85,10 @@ def read_hw2(input_queue):
 
 	with tf.control_dependencies([image]):
 		# resize and keeping the initial ratio height/width
-		new_w, new_h = _resize(initial_width, initial_height, "min")
+		# new_w, new_h = _resize(initial_width, initial_height, "min")
+
 		# resize to a square
-		# new_w, new_h = IMAGE_RESIZE * 2, IMAGE_RESIZE * 2
+		new_w, new_h = IMAGE_SIZE_before_random_crop,IMAGE_SIZE_before_random_crop
 		resized_image = tf.image.resize_images(image, [new_w, new_h])
 	result.uint8image = tf.cast(resized_image, tf.uint8)
 	image = tf.expand_dims(image, 0)

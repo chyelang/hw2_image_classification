@@ -136,6 +136,7 @@ def train():
 		config_tf = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement)
 		# config_tf.gpu_options.allow_growth = True
 
+		keep_prob1 = tf.get_default_graph().get_tensor_by_name('keep_prob1:0')
 		keep_prob2 = tf.get_default_graph().get_tensor_by_name('keep_prob2:0')
 		keep_prob3 = tf.get_default_graph().get_tensor_by_name('keep_prob3:0')
 		keep_prob = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
@@ -150,7 +151,7 @@ def train():
 				log_step_count_steps=100,
 				config=config_tf) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op, feed_dict={keep_prob2: 0.75, keep_prob3: 0.75, keep_prob: 0.5})
+				mon_sess.run(train_op, feed_dict={keep_prob1: 1.0, keep_prob2: 0.75, keep_prob3: 0.75, keep_prob: 0.5})
 				# 每一次run都会调用一次所有的hook
 				# 每输入一个batch的数据，则global step加1
 

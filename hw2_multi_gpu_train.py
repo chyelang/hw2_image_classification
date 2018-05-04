@@ -268,11 +268,11 @@ def train():
 		feed_dict = {}
 		for counter, item in enumerate(keep_prob, 1):
 			if counter % 4 == 1:
-				feed_dict[item] = 0.9
+				feed_dict[item] = 0.75
 			elif counter % 4 == 2:
-					feed_dict[item] = 0.8
+					feed_dict[item] = 0.65
 			elif counter % 4 == 3:
-				feed_dict[item] = 0.7
+				feed_dict[item] = 0.55
 			else:
 				feed_dict[item] = 0.5
 		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=10)

@@ -73,10 +73,10 @@ def image_augmentation(image):
 
 	# # Rotation (at finer angles)
 	# degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
-	# degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
-	# tf.summary.scalar("rotate_angle", degrees_angle)
-	# radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
-	# image = tf.contrib.image.rotate(image, radian_value)
+	degrees_angle = tf.random_uniform((), -20, 20, dtype=tf.float32)
+	tf.summary.scalar("rotate_angle", degrees_angle)
+	radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
+	image = tf.contrib.image.rotate(image, radian_value)
 
 	# add_salt_pepper_noise
 	# salt_vs_pepper = 0.2

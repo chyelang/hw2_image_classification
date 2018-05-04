@@ -125,7 +125,7 @@ def inference(images):
 
 	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v2_module(pool1, 128, map_size=(64, 64, 64, 64), reduce1x1_size=64, batch_norm=True)
+		inception2 = layers.inception_v2_module(pool1, 128, map_size=(64, 96, 96, 64), reduce1x1_size=64, batch_norm=True)
 
 	# pool2
 	pool2 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -133,7 +133,7 @@ def inference(images):
 
 	# inception3
 	with tf.variable_scope('inception3') as scope:
-		inception3 = layers.inception_v2_module(pool2, 256, map_size=(16, 48, 48, 16), reduce1x1_size=64, batch_norm=True)
+		inception3 = layers.inception_v2_module(pool2, 320, map_size=(32, 64, 64, 32), reduce1x1_size=96, batch_norm=True)
 
 	# pool3
 	pool3 = tf.nn.max_pool(inception3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
@@ -144,15 +144,15 @@ def inference(images):
 		reshape = tf.reshape(pool3, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 512,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-0)
+		dense1 = layers.dense_layer(reshape, dim, 256,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-4)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
 	# tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
 	# and performs the softmax internally for efficiency.
 	with tf.variable_scope('softmax_linear') as scope:
-		weights = _variable_with_weight_decay('weights', [512, NUM_CLASSES],
-											  stddev=1 / 512.0, wd=None)
+		weights = _variable_with_weight_decay('weights', [256, NUM_CLASSES],
+											  stddev=1 / 256.0, wd=None)
 		biases = _variable_on_cpu('biases', [NUM_CLASSES],
 								  tf.constant_initializer(0.0))
 		softmax_linear = tf.add(tf.matmul(dense1, weights), biases, name=scope.name)
@@ -244,6 +244,14 @@ def train(total_loss, global_step):
 
 	# Generate moving averages of all losses and associated summaries.
 	loss_averages_op = _add_loss_summaries(total_loss)
+	# global_step = tf.train.get_or_create_global_step()
+	# lr = tf.cond(tf.less(global_step, 10000),
+	# 			 lambda: tf.constant(0.001),
+	# 			 lambda: tf.cond(tf.less(global_step, 20000),
+	# 							 lambda: tf.constant(0.0005),
+	# 							 lambda: tf.cond(tf.less(global_step, 30000),
+	# 											 lambda: tf.constant(0.00025),
+	# 											 lambda: tf.constant(0.00025))))
 	lr = tf.Variable(0.001, trainable=False, dtype=tf.float32)
 	lr_decrease_op = tf.assign(lr, tf.divide(lr, 2.0))
 	tf.summary.scalar('learning_rate', lr)

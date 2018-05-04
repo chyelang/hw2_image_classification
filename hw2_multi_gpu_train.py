@@ -167,8 +167,9 @@ def train():
 						# Keep track of the gradients across all towers.
 						tower_grads.append(grads)
 						tower_train_acc_op.append(train_acc_op)
+						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'keep_prob1:0'))
 						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'keep_prob2:0'))
-						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope +'keep_prob3:0'))
+						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'keep_prob3:0'))
 						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'dense1/keep_prob:0'))
 
 		# We must calculate the mean of each gradient. Note that this is the
@@ -265,8 +266,15 @@ def train():
 		# config_tf.gpu_options.allow_growth = True
 
 		feed_dict = {}
-		for item in keep_prob:
-			feed_dict[item] = 0.5
+		for counter, item in enumerate(keep_prob, 1):
+			if counter % 4 == 1:
+				feed_dict[item] = 0.9
+			elif counter % 4 == 2:
+					feed_dict[item] = 0.8
+			elif counter % 4 == 3:
+				feed_dict[item] = 0.7
+			else:
+				feed_dict[item] = 0.5
 		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=10)
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,

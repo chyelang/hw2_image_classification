@@ -123,9 +123,12 @@ def inference(images):
 	pool1 = tf.nn.max_pool(conv_stack1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool1')
 
+	keep_prob1 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob1")
+	dropout1 = layers.spatial_dropout(pool1, keep_prob=keep_prob1, name='dropout1')
+
 	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v2_module(pool1, 128, map_size=(64, 96, 96, 64), reduce1x1_size=64, batch_norm=True)
+		inception2 = layers.inception_v2_module(dropout1, 128, map_size=(64, 96, 96, 64), reduce1x1_size=64, batch_norm=True)
 
 	# pool2
 	pool2 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],

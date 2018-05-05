@@ -17,14 +17,15 @@ import numpy as np
 import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
-# tf.app.flags.DEFINE_string('section', "lenovo",
-# 						   """where to run this code""")
+tf.app.flags.DEFINE_string('section', "lenovo",
+						   """where to run this code""")
 import hw2
 
 section = FLAGS.section
 config = configparser.RawConfigParser()
 config_path = projectRootPath + '/' + 'config.cfg'
 config.read(config_path)
+is_during_train = True
 
 tf.app.flags.DEFINE_string('eval_dir', config.get(section, 'eval_dir'),
 						   """Directory where to write event logs.""")
@@ -50,12 +51,17 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, acc):
 	"""
 	with tf.Session() as sess:
 		ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
-		if ckpt and ckpt.model_checkpoint_path:
+		if ckpt and is_during_train and ckpt.model_checkpoint_path:
 			# Restores from checkpoint
 			saver.restore(sess, ckpt.model_checkpoint_path)
 			# Assuming model_checkpoint_path looks something like:
 			#   /my-favorite-path/hw2_train/model.ckpt-0,
 			# extract global_step from it.
+			global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
+		# use best checkpoint for eval after the trainning has finished
+		elif ckpt and (not is_during_train) and ckpt.all_model_checkpoint_paths[0]:
+			# Restores from checkpoint
+			saver.restore(sess, ckpt.all_model_checkpoint_paths[0])
 			global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
 		else:
 			print('No checkpoint file found')
@@ -81,13 +87,13 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, acc):
 			# Compute precision @ 1.
 			precision = true_count / total_sample_count
 			print('%s: precision @ Top1 = %.3f' % (datetime.now(), precision))
-			# acc_op = acc.assign(precision)
-			# sess.run(acc_op)
-			#
-			# summary = tf.Summary()
-			# summary.ParseFromString(sess.run(summary_op))
-			# summary.value.add(tag='Precision @ 1', simple_value=precision)
-			# summary_writer.add_summary(summary, global_step)
+			acc_op = acc.assign(precision)
+			sess.run(acc_op)
+
+			summary = tf.Summary()
+			summary.ParseFromString(sess.run(summary_op))
+			summary.value.add(tag='Precision @ Top1', simple_value=precision)
+			summary_writer.add_summary(summary, global_step)
 		except Exception as e:
 			coord.request_stop(e)
 
@@ -138,4 +144,5 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+	is_during_train = False
 	tf.app.run()

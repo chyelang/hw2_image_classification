@@ -138,11 +138,13 @@ def train():
 			saver=saver,
 			save_steps=FLAGS.save_checkpoint_steps)
 		with tf.train.MonitoredTrainingSession(
+				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
 					   tf.train.NanTensorHook(loss),
 					   _LoggerHook(),
 					    early_stop_hook,
 					   ckpt_hook],
+				save_checkpoint_secs=-1,
 				log_step_count_steps=100,
 				config=config_tf) as mon_sess:
 			while not mon_sess.should_stop():

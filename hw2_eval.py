@@ -80,14 +80,14 @@ def eval_once(saver, summary_writer, top_k_op, summary_op, acc):
 
 			# Compute precision @ 1.
 			precision = true_count / total_sample_count
-			print('%s: precision @ 1 = %.3f' % (datetime.now(), precision))
-			acc_op = acc.assign(precision)
-			sess.run(acc_op)
-
-			summary = tf.Summary()
-			summary.ParseFromString(sess.run(summary_op))
-			summary.value.add(tag='Precision @ 1', simple_value=precision)
-			summary_writer.add_summary(summary, global_step)
+			print('%s: precision @ Top1 = %.3f' % (datetime.now(), precision))
+			# acc_op = acc.assign(precision)
+			# sess.run(acc_op)
+			#
+			# summary = tf.Summary()
+			# summary.ParseFromString(sess.run(summary_op))
+			# summary.value.add(tag='Precision @ 1', simple_value=precision)
+			# summary_writer.add_summary(summary, global_step)
 		except Exception as e:
 			coord.request_stop(e)
 

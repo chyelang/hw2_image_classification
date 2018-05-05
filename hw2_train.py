@@ -66,11 +66,6 @@ def train():
 			train_acc_op = tf.assign(train_acc, tf.div(tf.cast(tf.reduce_sum(tf.cast(top_k_op, tf.int32)), tf.float32),
 													   tf.cast(FLAGS.batch_size, tf.float32)))
 			tf.summary.scalar("train_acc", train_acc_op)
-			# val_acc = tf.Variable(0, trainable=False, dtype=tf.float32, name="val_acc")
-			# tmp = hw2_eval.evaluate()
-			# # TODO: create a subgraphe to do the eval
-			# val_acc_op = tf.assign(val_acc, tmp)
-			# tf.summary.scalar("val_acc", val_acc_op)
 
 		class _LoggerHook(tf.train.SessionRunHook):
 			"""Logs loss and runtime."""
@@ -151,12 +146,9 @@ def train():
 				log_step_count_steps=100,
 				config=config_tf) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op, feed_dict={keep_prob1: 1.0, keep_prob2: 0.75, keep_prob3: 0.75, keep_prob: 0.5})
-				# 每一次run都会调用一次所有的hook
-				# 每输入一个batch的数据，则global step加1
+				mon_sess.run(train_op, feed_dict={keep_prob1: 1.0, keep_prob2: 0.75, keep_prob3: 0.7, keep_prob: 0.5})
 
 def main(argv=None):
-	# # why to delete? 因为此处的train_dir只是存放log和checkpoint的，并不是训练数据
 	if tf.gfile.Exists(FLAGS.log_path):
 		tf.gfile.DeleteRecursively(FLAGS.log_path)
 	tf.gfile.MakeDirs(FLAGS.log_path)

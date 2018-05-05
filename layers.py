@@ -3,11 +3,11 @@ import math
 import numpy as np
 
 # to use tensorflow-defind convlution function
-from tensorflow.python.ops.gen_nn_ops import conv2d
+# from tensorflow.python.ops.gen_nn_ops import conv2d
 
 # to use user-defined convlution function
-# def conv2d(input, filter, strides, padding = 'SAME'):
-# 	return conv2d_func(input, filter, strides, padding = padding)
+def conv2d(input, filter, strides, padding = 'SAME'):
+	return conv2d_func(input, filter, strides, padding = padding)
 
 from utils import _variable_on_cpu
 from utils import _variable_with_weight_decay
@@ -318,7 +318,6 @@ def conv2d_test():
 		# print(sess.run(expected))
 		print(sess.run(tf.reduce_sum(expected - actual)))
 
-
 	# test case 1
 	# there will be some minor errors between actual and expected
 	image2 = tf.random_uniform([5,50,50,3], minval= 0, maxval=10, dtype=tf.float32)
@@ -337,7 +336,7 @@ def conv2d_test():
 		print(sess.run(tf.reduce_sum(expected2 - actual2)))
 		print(sess.run(tf.reduce_sum(expected2_ - actual2_)))
 
-	# test case 1
+	# test case 2
 	image1 = np.arange(10 * 10 * 1).reshape(1, 10, 10, 1)
 	image1 = tf.convert_to_tensor(image1.astype(np.float32))
 	#sobel_x filter

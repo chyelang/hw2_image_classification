@@ -72,10 +72,10 @@ def image_augmentation(image):
 
 	# # Rotation (at finer angles)
 	# degrees_angle = tf.random_uniform((), 0, 360, dtype=tf.float32)
-	degrees_angle = tf.random_uniform((), -10, 10, dtype=tf.float32)
-	tf.summary.scalar("rotate_angle", degrees_angle)
-	radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
-	image = tf.contrib.image.rotate(image, radian_value)
+	# degrees_angle = tf.random_uniform((), -10, 10, dtype=tf.float32)
+	# tf.summary.scalar("rotate_angle", degrees_angle)
+	# radian_value = tf.multiply(degrees_angle, tf.constant(3.14, dtype=tf.float32)) / 180   # Convert to radian
+	# image = tf.contrib.image.rotate(image, radian_value)
 
 	# add_salt_pepper_noise
 	# salt_vs_pepper = 0.2
@@ -96,11 +96,11 @@ def image_augmentation(image):
 	# image = tf.image.rot90(image, k=seed)
 
 	# Randomly flip the image horizontally and vertically.
-	image = tf.image.random_flip_left_right(image)
+	# image = tf.image.random_flip_left_right(image)
 	# image = tf.image.random_flip_up_down(image)
 
 	# brightness and contrast
-	image = tf.image.random_brightness(image, max_delta=63)
-	image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
+	# image = tf.image.random_brightness(image, max_delta=63)
+	# image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
 
 	return image

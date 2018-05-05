@@ -6,6 +6,7 @@ from datetime import datetime
 import time
 import os
 import configparser
+import csv
 
 curPath = os.path.abspath(os.path.dirname(__file__))
 projectRootPath = curPath
@@ -40,6 +41,11 @@ current_val_acc = 0
 val_acc_update = False
 def train():
 	"""Train hw2 for a number of steps."""
+	csvfile_path = FLAGS.log_path + '/' + time.strftime('%m%d%H%M', time.localtime(time.time()))+'_val_acc.csv'
+	with open(csvfile_path, 'a') as csvfile:
+		writer = csv.writer(csvfile, delimiter='			')
+		writer.writerow(['global_step', 'train_acc', 'val_acc'])
+
 	with tf.Graph().as_default():
 		global_step = tf.train.get_or_create_global_step()
 
@@ -76,7 +82,7 @@ def train():
 
 			def before_run(self, run_context):
 				self._step += 1
-				return tf.train.SessionRunArgs([loss, train_acc_op])  # Asks for loss value.
+				return tf.train.SessionRunArgs([loss, train_acc])  # Asks for loss value.
 
 			def after_run(self, run_context, run_values):
 				if self._step % FLAGS.log_frequency == 0:
@@ -104,6 +110,9 @@ def train():
 				self.wait = 0
 				self.current = 0
 
+			def before_run(self, run_context):
+				return tf.train.SessionRunArgs([train_acc])  # Asks for loss value.
+
 			def after_run(self, run_context, run_values):
 				ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
 				if ckpt and ckpt.model_checkpoint_path:
@@ -113,6 +122,11 @@ def train():
 						self.current = hw2_eval.evaluate()
 						format_str = '%s: step %d, val_acc = %.3f'
 						print(format_str % (datetime.now(), self._ckpt_step, self.current))
+
+						with open(csvfile_path, 'a') as csvfile:
+							writer = csv.writer(csvfile, delimiter='			')
+							writer.writerow([self._ckpt_step, run_values.results[0], self.current])
+
 						if (self.current - self.min_delta) > self.best:
 							self.best = self.current
 							self.wait = 0
@@ -123,6 +137,7 @@ def train():
 								run_context.session.run(lr_decrease_op)
 							if self.wait >= self.patience:
 								print('Early stop training!')
+								print('val_acc log stored in {0}'.format(csvfile_path))
 								run_context.request_stop()
 		config_tf = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement)
 		# config_tf.gpu_options.allow_growth = True

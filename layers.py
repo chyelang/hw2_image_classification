@@ -3,11 +3,11 @@ import math
 import numpy as np
 
 # to use tensorflow-defind convlution function
-# from tensorflow.python.ops.gen_nn_ops import conv2d
+from tensorflow.python.ops.gen_nn_ops import conv2d
 
 # to use user-defined convlution function
-def conv2d(input, filter, strides, padding = 'SAME'):
-	return conv2d_func(input, filter, strides, padding=padding)
+# def conv2d(input, filter, strides, padding = 'SAME'):
+# 	return conv2d_func(input, filter, strides, padding=padding)
 
 from utils import _variable_on_cpu
 from utils import _variable_with_weight_decay

@@ -7,7 +7,7 @@ import numpy as np
 
 # to use user-defined convlution function
 def conv2d(input, filter, strides, padding = 'SAME'):
-	return conv2d_func(input, filter, strides, padding = padding)
+	return conv2d_func(input, filter, strides, padding=padding)
 
 from utils import _variable_on_cpu
 from utils import _variable_with_weight_decay
@@ -257,7 +257,6 @@ def spatial_dropout(x, keep_prob, seed=1234, name='dropout'):
 def conv2d_func(input, filter, strides, padding='SAME'):
 	# NHWC
 	"""
-
 	:param input:
 	:param filter:
 	:param strides:
@@ -269,27 +268,7 @@ def conv2d_func(input, filter, strides, padding='SAME'):
 	 row of zeros at the bottom).
 	:return:
 	"""
-	in_dims = input.get_shape().as_list()
 	filter_dims = filter.get_shape().as_list()
-	out_dims = [in_dims[0], 0, 0, filter_dims[-1]]
-	# if padding == "SAME":
-	# 	out_dims[1] = math.ceil(float(in_dims[1]) / float(strides[1]))
-	# 	out_dims[2] = math.ceil(float(in_dims[2]) / float(strides[2]))
-	# 	delta_H = strides[1] * (out_dims[1]-1) + filter_dims[1] - in_dims[1]
-	# 	delta_W = strides[2] * (out_dims[2] - 1) + filter_dims[2] - in_dims[2]
-	# 	paddings = tf.constant([[0, 0], [math.floor(delta_H/2.0), math.ceil(delta_H/2.0)],
-	# 							[math.floor(delta_W/2.0), math.ceil(delta_W/2.0)], [0, 0]])
-	# 	input = tf.pad(input, paddings, "CONSTANT")
-	#
-	# elif padding == "VALID":
-	# 	out_dims[1] = math.ceil(float(in_dims[1] - filter_dims[1] + 1)
-	# 							/ float(strides[1]))
-	# 	out_dims[2] = math.ceil(float(in_dims[2] - filter_dims[2] + 1)
-	# 							/ float(strides[2]))
-	# else:
-	# 	return
-	# init_values = tf.zeros(out_dims)
-	# output = tf.Variable(init_values, trainable=False, dtype=tf.float32)
 	filter_mat = tf.reshape(filter, [-1, filter_dims[-1]])
 	image_mat = tf.extract_image_patches(images=input, ksizes=[1, filter_dims[0], filter_dims[1], 1], strides=strides,
 										 rates=[1, 1, 1, 1], padding=padding)
@@ -297,9 +276,6 @@ def conv2d_func(input, filter, strides, padding='SAME'):
 	image_mat = tf.reshape(image_mat, [-1, image_patches_dim[-1]])
 	conv_mat = tf.matmul(filter_mat, image_mat, transpose_a=True, transpose_b=True)
 	conv = tf.reshape(tf.transpose(conv_mat), [image_patches_dim[0], image_patches_dim[1], image_patches_dim[2], filter_dims[-1]])
-
-	# tf.reduce_sum(tf.multiply(image_mat, tf.reshape(sobel_x_filter, [9])), 3, keep_dims=True)
-
 	return conv
 
 def conv2d_test():

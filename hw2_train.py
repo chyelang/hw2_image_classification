@@ -33,8 +33,8 @@ tf.app.flags.DEFINE_boolean('log_device_placement', bool(config.getint(section, 
 							"""Whether to log device placement.""")
 tf.app.flags.DEFINE_integer('log_frequency', config.getint(section, 'log_frequency'),
 							"""How often to log results to the console.""")
-tf.app.flags.DEFINE_integer('save_checkpoint_secs', config.getint(section, 'save_checkpoint_secs'),
-							"""save_checkpoint_secs""")
+tf.app.flags.DEFINE_integer('save_checkpoint_steps', config.getint(section, 'save_checkpoint_steps'),
+							"""save_checkpoint_steps""")
 
 current_val_acc = 0
 val_acc_update = False
@@ -92,10 +92,6 @@ def train():
 								  'sec/batch)')
 					print(format_str % (datetime.now(), self._step, loss_value, train_acc_val,
 										examples_per_sec, sec_per_batch))
-				# print("globle step = %d" %(run_values.results[2]))
-				# if run_values.results[2] % 4 == 0:
-				# 	saver.save(run_context.session, FLAGS.log_path+"/model.ckpt", run_values.results[2])
-
 
 		class _EarlyStoppingHook(tf.train.SessionRunHook):
 			"""Hook that requests stop at a specified step."""
@@ -136,17 +132,21 @@ def train():
 		keep_prob3 = tf.get_default_graph().get_tensor_by_name('keep_prob3:0')
 		keep_prob = tf.get_default_graph().get_tensor_by_name('dense1/keep_prob:0')
 		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=10)
+		saver = tf.train.Saver(max_to_keep=10)
+		ckpt_hook = tf.train.CheckpointSaverHook(
+			checkpoint_dir=FLAGS.log_path,
+			saver=saver,
+			save_steps=FLAGS.save_checkpoint_steps)
 		with tf.train.MonitoredTrainingSession(
-				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
 					   tf.train.NanTensorHook(loss),
 					   _LoggerHook(),
-					    early_stop_hook],
-				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
+					    early_stop_hook,
+					   ckpt_hook],
 				log_step_count_steps=100,
 				config=config_tf) as mon_sess:
 			while not mon_sess.should_stop():
-				mon_sess.run(train_op, feed_dict={keep_prob1: 1.0, keep_prob2: 0.75, keep_prob3: 0.7, keep_prob: 0.5})
+				mon_sess.run(train_op, feed_dict={keep_prob1: 1.0, keep_prob2: 0.75, keep_prob3: 0.75, keep_prob: 0.5})
 
 def main(argv=None):
 	if tf.gfile.Exists(FLAGS.log_path):

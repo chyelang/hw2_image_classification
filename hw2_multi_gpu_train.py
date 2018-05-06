@@ -11,6 +11,7 @@ import re
 curPath = os.path.abspath(os.path.dirname(__file__))
 projectRootPath = curPath
 import tensorflow as tf
+import csv
 
 # parse arguments passed by command line by FLAGS
 FLAGS = tf.app.flags.FLAGS
@@ -34,8 +35,8 @@ tf.app.flags.DEFINE_boolean('log_device_placement', bool(config.getint(section, 
 							"""Whether to log device placement.""")
 tf.app.flags.DEFINE_integer('log_frequency', config.getint(section, 'log_frequency'),
 							"""How often to log results to the console.""")
-tf.app.flags.DEFINE_integer('save_checkpoint_secs', config.getint(section, 'save_checkpoint_secs'),
-							"""save_checkpoint_secs""")
+tf.app.flags.DEFINE_integer('save_checkpoint_steps', config.getint(section, 'save_checkpoint_steps'),
+							"""save_checkpoint_steps""")
 tf.app.flags.DEFINE_integer('num_gpus', config.getint(section, 'num_gpus'),
 							"""How many GPUs to use.""")
 
@@ -122,6 +123,11 @@ def average_gradients(tower_grads):
 
 def train():
 	"""Train hw2 for a number of steps."""
+	csvfile_path = FLAGS.log_path + '/' + time.strftime('%m%d%H%M', time.localtime(time.time()))+'_val_acc.csv'
+	with open(csvfile_path, 'a') as csvfile:
+		writer = csv.writer(csvfile, delimiter='\t')
+		writer.writerow(['global_step', 'train_acc', 'val_acc'])
+
 	with tf.Graph().as_default(), tf.device('/cpu:0'):
 		# Create a variable to count the number of train() calls. This equals the
 		# number of batches processed * FLAGS.num_gpus.
@@ -167,7 +173,6 @@ def train():
 						# Keep track of the gradients across all towers.
 						tower_grads.append(grads)
 						tower_train_acc_op.append(train_acc_op)
-						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'keep_prob1:0'))
 						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'keep_prob2:0'))
 						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'keep_prob3:0'))
 						keep_prob.append(tf.get_default_graph().get_tensor_by_name(scope + 'dense1/keep_prob:0'))
@@ -211,7 +216,7 @@ def train():
 
 			def before_run(self, run_context):
 				self._step += 1
-				return tf.train.SessionRunArgs([loss, train_acc_op_avg])  # Asks for loss value.
+				return tf.train.SessionRunArgs([loss, train_acc_op_avg])
 
 			def after_run(self, run_context, run_values):
 				if self._step % FLAGS.log_frequency == 0:
@@ -240,6 +245,9 @@ def train():
 				self.wait = 0
 				self.current = 0
 
+			def before_run(self, run_context):
+				return tf.train.SessionRunArgs([train_acc_op_avg])
+
 			def after_run(self, run_context, run_values):
 				ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
 				if ckpt and ckpt.model_checkpoint_path:
@@ -249,6 +257,11 @@ def train():
 						self.current = hw2_eval.evaluate()
 						format_str = '%s: step %d, val_acc = %.3f'
 						print(format_str % (datetime.now(), self._ckpt_step, self.current))
+
+						with open(csvfile_path, 'a') as csvfile:
+							writer = csv.writer(csvfile, delimiter='\t')
+							writer.writerow([self._ckpt_step * 2, run_values.results[0], self.current])
+
 						if (self.current - self.min_delta) > self.best:
 							self.best = self.current
 							self.wait = 0
@@ -259,30 +272,34 @@ def train():
 								run_context.session.run(lr_decrease_op)
 							if self.wait >= self.patience:
 								print('Early stop training!')
+								print('val_acc log stored in {0}'.format(csvfile_path))
 								run_context.request_stop()
 
 
 		config_tf = tf.ConfigProto(log_device_placement=FLAGS.log_device_placement, allow_soft_placement=True)
-		# config_tf.gpu_options.allow_growth = True
 
 		feed_dict = {}
 		for counter, item in enumerate(keep_prob, 1):
-			if counter % 4 == 1:
-				feed_dict[item] = 1
-			elif counter % 4 == 2:
-					feed_dict[item] = 0.75
-			elif counter % 4 == 3:
+			if counter % 3 == 1:
 				feed_dict[item] = 0.75
+			elif counter % 3 == 2:
+					feed_dict[item] = 0.75
 			else:
 				feed_dict[item] = 0.5
-		early_stop_hook = _EarlyStoppingHook(min_delta=0.0001, patience=10)
+		early_stop_hook = _EarlyStoppingHook(min_delta=0.00001, patience=10)
+		saver = tf.train.Saver(max_to_keep=10)
+		ckpt_hook = tf.train.CheckpointSaverHook(
+			checkpoint_dir=FLAGS.log_path,
+			saver=saver,
+			save_steps=FLAGS.save_checkpoint_steps / 2)
 		with tf.train.MonitoredTrainingSession(
 				checkpoint_dir=FLAGS.log_path,
 				hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
 					   tf.train.NanTensorHook(loss),
 					   _LoggerHook(),
-					   early_stop_hook],
-				save_checkpoint_secs=FLAGS.save_checkpoint_secs,
+					    early_stop_hook,
+					   ckpt_hook],
+				save_checkpoint_secs=-1,
 				log_step_count_steps=100,
 				config=config_tf) as mon_sess:
 			while not mon_sess.should_stop():

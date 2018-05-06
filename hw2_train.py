@@ -111,7 +111,7 @@ def train():
 				self.current = 0
 
 			def before_run(self, run_context):
-				return tf.train.SessionRunArgs([train_acc])  # Asks for loss value.
+				return tf.train.SessionRunArgs([train_acc])
 
 			def after_run(self, run_context, run_values):
 				ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)

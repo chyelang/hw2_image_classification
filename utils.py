@@ -1,6 +1,8 @@
 import tensorflow as tf
 # parse arguments passed by command line by FLAGS
 FLAGS = tf.app.flags.FLAGS
+import re
+TOWER_NAME = 'tower'
 
 def _activation_summary(x):
 	"""Helper to create summaries for activations.
@@ -13,7 +15,8 @@ def _activation_summary(x):
 	Returns:
 	  nothing
 	"""
-	tensor_name =  x.op.name
+	tensor_name = re.sub('%s_[0-9]*/' % TOWER_NAME, '', x.op.name)
+	# tensor_name =  x.op.name
 	tf.summary.histogram(tensor_name + '/activations', x)
 	tf.summary.scalar(tensor_name + '/sparsity', tf.nn.zero_fraction(x))
 
@@ -56,7 +59,8 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
 	var = _variable_on_cpu(
 		name,
 		shape,
-		tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
+		tf.keras.initializers.he_normal(seed=None))
+	# tf.truncated_normal_initializer(stddev=stddev, dtype=dtype)
 	if wd is not None:
 		weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
 		tf.add_to_collection('losses', weight_decay)

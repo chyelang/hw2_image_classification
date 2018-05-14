@@ -1,0 +1,33 @@
+Evaluation for hw2. 
+*****
+commands to run to start your test:
+for data_set1 evaluation: 
+python hw2_eval.py --eval_dir ./eval_dir --checkpoint_dir ./saved_model/train_log_dset1_handed \
+--test_data_path /your/path/to/test_set --num_examples examples_to_run_per_test --top_k 5 --run_once 0
+
+for data_set1 evaluation: 
+python hw2_eval.py --eval_dir ./eval_dir --checkpoint_dir ./saved_model/train_log_dset2_handed \
+--test_data_path /your/path/to/test_set --num_examples examples_to_run_per_test --top_k 5 --run_once 0
+
+=====
+you need to specify 4 parameters: --test_data_path /your/path/to/test_set --num_examples examples_to_run_per_test --top_k 5 --run_once 0
+=====
+
+The hw2_eval.py will fetch randomly --num_examples images in --test_data_path for a single test and return the --top_k error, this procedure will repeat if 
+--run_once is set 0 (and don't repeat if it's set to 1). 
+
+=====
+Attention: it's recommended to set --num_examples as big as your test set to get a consistant test result!
+=====
+
+for example:
+python hw2_eval.py --section ecm --eval_dir ./eval_dir --checkpoint_dir ./saved_model/train_log_dset1_handed \
+--test_data_path /scratch/xzou/hw2_image_classification/modified_data/dset1/test --num_examples 900 --top_k 5 --run_once 0
+
+python hw2_eval.py --section ecm --eval_dir ./eval_dir --checkpoint_dir ./saved_model/train_log_dset2_handed \
+--test_data_path /scratch/xzou/hw2_image_classification/modified_data/dset2/test --num_examples 900 --top_k 5 --run_once 0
+
+*****
+validation accurary (be done for about 800 samples in validation set):
+for dset1: top1 acc ~ 0.52, top5 acc ~ 0.79
+for dset2: top1 acc ~ 0.63, top5 acc ~ 0.84

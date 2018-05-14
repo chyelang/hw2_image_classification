@@ -7,6 +7,11 @@ checkpoints
 /data
 train_records
 inference_hist
+saved_model
+train_log
+*.pdf
+*.docx
+!md_image/*.png
 
 # Created by .ignore support plugin (hsz.mobi)
 /.idea

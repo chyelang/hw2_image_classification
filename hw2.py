@@ -34,18 +34,15 @@ tf.app.flags.DEFINE_boolean('use_fp16', bool(config.getint(section, 'use_fp16'))
 							"""Train the model using fp16.""")
 
 # Global constants describing the hw2 data set.
-IMAGE_SIZE = hw2_input.IMAGE_SIZE
+# IMAGE_SIZE = hw2_input.IMAGE_SIZE
 NUM_CLASSES = hw2_input.NUM_CLASSES
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = hw2_input.NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = hw2_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999  # The decay to use for the moving average.
-NUM_EPOCHS_PER_DECAY = 70  # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.2  # Learning rate decay factor.
-# INITIAL_LEARNING_RATE = 0.1       # Initial learning rate. for gradient desent
-INITIAL_LEARNING_RATE = 0.001  # Initial learning rate. for adam
 
+TOWER_NAME = 'tower'
 
 def distorted_inputs():
 	"""Construct distorted input for CIFAR training using the Reader ops.
@@ -113,81 +110,58 @@ def inference(images):
 	#
 	# conv_stack1
 	with tf.variable_scope('conv_stack1') as scope:
-		kernel_list = [[3,3,3,64], [3,3,64,64]]
+		kernel_list = [[3,3,3,64], [3,3,64,128]]
 		stride_list = [[1,1,1,1], [1,2,2,1]]
 		padding_list = ['SAME', 'SAME']
 		conv_stack1 = layers.conv2d_stack(images, kernel_list, stride_list, padding_list, batch_norm = True)
 
 	# pool1
-	pool1 = tf.nn.max_pool(conv_stack1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
+	pool1 = tf.nn.max_pool(conv_stack1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
 						   padding='SAME', name='pool1')
-
-	with tf.variable_scope('conv_stack2') as scope:
-		kernel_list = [[3,3,64,128],[3,3,128,128]]
-		stride_list = [[1,2,2,1],[1,1,1,1]]
-		padding_list = ['SAME','SAME']
-		conv_stack2 = layers.conv2d_stack(pool1, kernel_list, stride_list, padding_list, batch_norm = True)
-
-	# pool2
-	pool2 = tf.nn.max_pool(conv_stack2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool2')
-
-	with tf.variable_scope('conv_stack3') as scope:
-		kernel_list = [[3,3,128,256],[3,3,256,256]]
-		stride_list = [[1,1,1,1],[1,1,1,1]]
-		padding_list = ['SAME','SAME']
-		conv_stack3 = layers.conv2d_stack(pool2, kernel_list, stride_list, padding_list, batch_norm = True)
-
-	# pool3
-	pool3 = tf.nn.max_pool(conv_stack3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool3')
-
-	# inception1
-	with tf.variable_scope('inception1') as scope:
-		inception1 = layers.inception_v1_module(pool3, 256, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
-
-	# pool4
-	pool4 = tf.nn.max_pool(inception1, ksize=[1, 3, 3, 1], strides=[1, 1, 1, 1],
-						   padding='SAME', name='pool4')
 
 	# inception2
 	with tf.variable_scope('inception2') as scope:
-		inception2 = layers.inception_v1_module(pool4, 480, map_size=(128, 192, 96, 64), reduce1x1_size=64, batch_norm=True)
+		inception2 = layers.inception_v2_module(pool1, 128, map_size=(64, 96, 96, 64), reduce1x1_size=64, batch_norm=True)
 
-	# pool5
-	pool5 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-						   padding='SAME', name='pool5')
+	# pool2
+	pool2 = tf.nn.max_pool(inception2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+						   padding='SAME', name='pool2')
+
+	keep_prob2 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob2")
+	dropout2 = layers.spatial_dropout(pool2, keep_prob=keep_prob2, name='dropout2')
+
+	# inception3
+	with tf.variable_scope('inception3') as scope:
+		inception3 = layers.inception_v2_module(dropout2, 320, map_size=(32, 64, 64, 32), reduce1x1_size=96, batch_norm=True)
+
+	# pool3
+	pool3 = tf.nn.max_pool(inception3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+						   padding='SAME', name='pool3')
+
+	keep_prob3 = tf.placeholder_with_default(1.0, shape=(), name="keep_prob3")
+	dropout3 = layers.spatial_dropout(pool3, keep_prob=keep_prob3, name='dropout3')
 
 	# dense1
 	with tf.variable_scope('dense1') as scope:
-		# Move everything into depth so we can perform a single matrix multiply.
-		# images is a batch of input images, so images.get_shape().as_list()[0] is the
-		# number of pictures, this op is equivalent to flattent
-		reshape = tf.reshape(pool5, [images.get_shape().as_list()[0], -1])
+		reshape = tf.reshape(dropout3, [images.get_shape().as_list()[0], -1])
 		dim = reshape.get_shape()[1].value
 		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense1 = layers.dense_layer(reshape, dim, 2048,  dropout = True, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-3)
-		tf.summary.scalar("keep_prob", keep_prob)
-
-	# dense2
-	with tf.variable_scope('dense2') as scope:
-		keep_prob = tf.placeholder_with_default(1.0, shape=(), name="keep_prob")
-		dense2 = layers.dense_layer(dense1, 2048, 1024,  dropout = True, keep_prob=keep_prob, batch_norm=False, weight_decay=1e-3)
+		dense1 = layers.dense_layer(reshape, dim, 256,  dropout=True, keep_prob=keep_prob, batch_norm=True, weight_decay=1e-3)
 		tf.summary.scalar("keep_prob", keep_prob)
 
 	# linear layer(WX + b),
-	# We don't apply softmax here because
 	# tf.nn.sparse_softmax_cross_entropy_with_logits accepts the unscaled logits
 	# and performs the softmax internally for efficiency.
 	with tf.variable_scope('softmax_linear') as scope:
-		weights = _variable_with_weight_decay('weights', [1024, NUM_CLASSES],
-											  stddev=1 / 1024.0, wd=None)
+		weights = _variable_with_weight_decay('weights', [256, NUM_CLASSES],
+											  stddev=1 / 256.0, wd=None)
 		biases = _variable_on_cpu('biases', [NUM_CLASSES],
 								  tf.constant_initializer(0.0))
-		softmax_linear = tf.add(tf.matmul(dense2, weights), biases, name=scope.name)
+		softmax_linear = tf.add(tf.matmul(dense1, weights), biases, name=scope.name)
 		_activation_summary(softmax_linear)
 
 	return softmax_linear
+
 
 def loss(logits, labels):
 	"""Add L2Loss to all the trainable variables.
@@ -253,40 +227,17 @@ def train(total_loss, global_step):
 	Returns:
 	  train_op: op for training.
 	"""
-	# Variables that affect learning rate.
-	# # NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 扫过多少example之后才算一个epoch，一般是设置成样本总数吧？
-	# # FLAGS.batch_size = 每个batch选取多少个example
-	num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
-	# # 扫描完一个batch之后，梯度更新了一次，算一个step，算运行了一次graph。 下式计算出需要扫描多少个batch之后才进行一次lr decay
-	decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
-
-	# Decay the learning rate exponentially based on the number of steps.
-	##　decayed_learning_rate = learning_rate *　decay_rate ^ (global_step / decay_steps)
-	## 注意由于staircase=True， 所以指数一直是一个int!
-	# lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
-	#                                 global_step,
-	#                                 decay_steps,
-	#                                 LEARNING_RATE_DECAY_FACTOR,
-	#                                 staircase=True)
-	# tf.summary.scalar('learning_rate', lr)
-
 	# Generate moving averages of all losses and associated summaries.
 	loss_averages_op = _add_loss_summaries(total_loss)
-	global_step = tf.train.get_or_create_global_step()
-	lr = tf.cond(tf.less(global_step, 10000),
-				 lambda: tf.constant(0.001),
-				 lambda: tf.cond(tf.less(global_step, 20000),
-								 lambda: tf.constant(0.0005),
-								 lambda: tf.cond(tf.less(global_step, 30000),
-												 lambda: tf.constant(0.00025),
-												 lambda: tf.constant(0.00001))))
+	lr = tf.Variable(0.001, trainable=False, dtype=tf.float32)
+	lr_decrease_op = tf.assign(lr, tf.divide(lr, 2.0))
 	tf.summary.scalar('learning_rate', lr)
 	# Compute gradients.
 	with tf.control_dependencies([loss_averages_op]):
 		# opt = tf.train.GradientDescentOptimizer(lr)
 		opt = tf.train.AdamOptimizer(learning_rate=lr)
-		lr_actu = opt._lr
-		tf.summary.scalar('learning_rate_actu', lr_actu)
+		# lr_actu = opt._lr
+		# tf.summary.scalar('learning_rate_actu', lr_actu)
 		grads = opt.compute_gradients(total_loss)
 
 	# Apply gradients.

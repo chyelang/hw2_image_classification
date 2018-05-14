@@ -11,7 +11,7 @@ saved_model
 train_log
 *.pdf
 *.docx
-!md_image/*.png
+*.txt
 
 # Created by .ignore support plugin (hsz.mobi)
 /.idea

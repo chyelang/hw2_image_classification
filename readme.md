@@ -86,7 +86,9 @@ conv2d\_func的实现借鉴了caffe中卷积层的实现。其主要分为两步
 validation accurary (be done for about 900 samples in validation set):
 * for dset1: top1 acc ~ 0.52, top5 acc ~ 0.79
 * for dset2: top1 acc ~ 0.63, top5 acc ~ 0.84
-![](./md_image/dset1_acc.png) ![](./md_image/dset2_acc.png)
+
+![](./md_image/dset1_acc.png)
+![](./md_image/dset2_acc.png)
 
 ## 测试命令
 通过使用tf.app.flags.FLAGS、configparser等工具，本作业代码的所有参数既可以通过命令行传入，也可以通过修改congfig.cfg文件传入。若要进行测试，请先进入hw2_image_classification_handed目录，然后输入以下相应的命令：
